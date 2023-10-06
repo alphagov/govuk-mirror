@@ -26,7 +26,14 @@ func NewCrawler(cfg *config.Config) (*Crawler, error) {
 func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	c := colly.NewCollector(
 		colly.UserAgent(cfg.UserAgent),
+		colly.Async(true),
 	)
+
+	err := c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: cfg.Concurrency})
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler)

@@ -16,18 +16,21 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "defaults",
 			expected: &Config{
-				UserAgent: "govukbot",
+				UserAgent:   "govukbot",
+				Concurrency: 10,
 			},
 		},
 		{
 			name: "env vars",
 			envVars: map[string]string{
-				"SITE":       "example.com",
-				"USER_AGENT": "custom-agent",
+				"SITE":        "example.com",
+				"USER_AGENT":  "custom-agent",
+				"CONCURRENCY": "20",
 			},
 			expected: &Config{
-				Site:      "example.com",
-				UserAgent: "custom-agent",
+				Site:        "example.com",
+				UserAgent:   "custom-agent",
+				Concurrency: 20,
 			},
 		},
 	}

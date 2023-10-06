@@ -146,6 +146,7 @@ func TestNewCrawler(t *testing.T) {
 	assert.Equal(t, cfg, cr.cfg)
 	assert.IsType(t, &colly.Collector{}, cr.collector)
 	assert.Equal(t, "custom-agent", cr.collector.UserAgent)
+	assert.Equal(t, true, cr.collector.Async)
 }
 
 func TestRun(t *testing.T) {

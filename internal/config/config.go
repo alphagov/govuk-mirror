@@ -5,8 +5,9 @@ import (
 )
 
 type Config struct {
-	Site      string `env:"SITE"`
-	UserAgent string `env:"USER_AGENT" envDefault:"govukbot"`
+	Site        string `env:"SITE"`
+	UserAgent   string `env:"USER_AGENT" envDefault:"govukbot"`
+	Concurrency int    `env:"CONCURRENCY" envDefault:"10"`
 }
 
 func NewConfig() (*Config, error) {
