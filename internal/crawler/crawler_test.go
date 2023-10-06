@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"mirrorer/internal/config"
+	"mirrorer/internal/file"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -43,6 +44,7 @@ var routes = map[string]struct {
 			</head>
 			<body>
 				<a href="/child">Visit child</a>
+				<a href="/redirect">Visit redirect</a>
 				<img src="/assets/image.jpg">
 				<script src="assets/script.js"></script>
 
@@ -84,6 +86,15 @@ var routes = map[string]struct {
 		status:      http.StatusOK,
 		contentType: "text/html",
 		body:        []byte(`<!DOCTYPE html><html><head><title>Child</title></head></html>`),
+	},
+	"/redirect": {
+		status:           http.StatusMovedPermanently,
+		redirectLocation: "/redirected",
+	},
+	"/redirected": {
+		status:      http.StatusOK,
+		contentType: "text/html",
+		body:        []byte(`<!DOCTYPE html><html><head><title>Redirected</title></head></html>`),
 	},
 	"/404": {
 		status:      http.StatusNotFound,
@@ -167,6 +178,16 @@ func TestRun(t *testing.T) {
 			name:           "Test child",
 			filePath:       "/child.html",
 			expectedOutput: routes["/child"].body,
+		},
+		{
+			name:           "Test redirect internal",
+			filePath:       "/redirect.html",
+			expectedOutput: file.RedirectHTMLBody(ts.URL + "/redirected"),
+		},
+		{
+			name:           "Test redirected",
+			filePath:       "/redirected.html",
+			expectedOutput: routes["/redirected"].body,
 		},
 	}
 

@@ -7,6 +7,24 @@ import (
 	"testing"
 )
 
+func TestRedirectHTMLBody(t *testing.T) {
+	redirectURL := "https://example.com"
+	expectedOutput := []byte(`<!DOCTYPE html>
+	<html lang="en">
+	<head>
+	<meta http-equiv="refresh" content="1; url=https://example.com">
+	<title>Redirecting</title>
+	</head>
+	<body>
+	<p>Redirecting you to <a href="https://example.com">https://example.com</a>.</p>
+	</body>
+	</html>`)
+	output := RedirectHTMLBody(redirectURL)
+	if string(output) != string(expectedOutput) {
+		t.Errorf("expected %s, got %s", expectedOutput, output)
+	}
+}
+
 func TestSave(t *testing.T) {
 	u, _ := url.Parse("https://example.com/foo/bar")
 	contentType := "text/html"

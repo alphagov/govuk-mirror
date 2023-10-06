@@ -10,6 +10,21 @@ import (
 	"strings"
 )
 
+func RedirectHTMLBody(redirectURL string) []byte {
+	body := fmt.Sprintf(`<!DOCTYPE html>
+	<html lang="en">
+	<head>
+	<meta http-equiv="refresh" content="1; url=%[1]s">
+	<title>Redirecting</title>
+	</head>
+	<body>
+	<p>Redirecting you to <a href="%[1]s">%[1]s</a>.</p>
+	</body>
+	</html>`, redirectURL)
+
+	return []byte(body)
+}
+
 func Save(u *url.URL, contentType string, body []byte) error {
 	filePath, err := GenerateFilePath(u, contentType)
 	if err != nil {

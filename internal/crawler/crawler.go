@@ -3,6 +3,7 @@ package crawler
 import (
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
+	"net/http"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/rs/zerolog/log"
@@ -28,6 +29,9 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler)
 
+	// Save HTML redirects
+	c.SetRedirectHandler(redirectHandler)
+
 	// Save successful responses to disk
 	c.OnResponse(responseHandler)
 
@@ -45,6 +49,18 @@ func (cr *Crawler) Run() {
 	}
 
 	cr.collector.Wait()
+}
+
+func redirectHandler(req *http.Request, via []*http.Request) error {
+	for _, redirectReq := range via {
+		body := file.RedirectHTMLBody(req.URL.String())
+		err := file.Save(redirectReq.URL, "text/html", body)
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func htmlHandler(e *colly.HTMLElement) {
