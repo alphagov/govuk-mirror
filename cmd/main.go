@@ -3,6 +3,7 @@ package main
 import (
 	"mirrorer/internal/config"
 	"mirrorer/internal/crawler"
+	"mirrorer/internal/mime"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -11,6 +12,7 @@ import (
 
 func main() {
 	initLogger()
+	initMime()
 	cfg := initConfig()
 
 	cr, err := crawler.NewCrawler(cfg)
@@ -28,6 +30,11 @@ func initLogger() {
 	level, err := zerolog.ParseLevel(logLevel)
 	checkError(err, "Error parsing log level")
 	zerolog.SetGlobalLevel(level)
+}
+
+func initMime() {
+	err := mime.LoadAdditionalMimeTypes()
+	checkError(err, "Error loading additional mime types")
 }
 
 func initConfig() *config.Config {
