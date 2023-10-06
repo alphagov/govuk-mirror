@@ -45,6 +45,7 @@ var routes = map[string]struct {
 			<body>
 				<a href="/child">Visit child</a>
 				<a href="/redirect">Visit redirect</a>
+				<a href="/external/redirect">Visit external redirect</a>
 				<img src="/assets/image.jpg">
 				<script src="assets/script.js"></script>
 
@@ -96,6 +97,10 @@ var routes = map[string]struct {
 		status:      http.StatusOK,
 		contentType: "text/html",
 		body:        []byte(`<!DOCTYPE html><html><head><title>Redirected</title></head></html>`),
+	},
+	"/external/redirect": {
+		status:           http.StatusSeeOther,
+		redirectLocation: "https://disallowed.com",
 	},
 	"/404": {
 		status:      http.StatusNotFound,
@@ -195,6 +200,11 @@ func TestRun(t *testing.T) {
 			name:           "Test redirected",
 			filePath:       "/redirected.html",
 			expectedOutput: routes["/redirected"].body,
+		},
+		{
+			name:           "Test external redirect",
+			filePath:       "/external/redirect.html",
+			expectedOutput: file.RedirectHTMLBody("https://disallowed.com"),
 		},
 	}
 

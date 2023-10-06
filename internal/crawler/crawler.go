@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"mirrorer/internal/client"
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
 	"net/http"
@@ -30,6 +31,9 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 		colly.Async(true),
 	)
 
+	client := client.NewClient(c, redirectHandler)
+	c.SetClient(client)
+
 	err := c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: cfg.Concurrency})
 
 	if err != nil {
@@ -44,9 +48,6 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler)
-
-	// Save HTML redirects
-	c.SetRedirectHandler(redirectHandler)
 
 	// Save successful responses to disk
 	c.OnResponse(responseHandler)
