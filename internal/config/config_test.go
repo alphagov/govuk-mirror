@@ -14,12 +14,20 @@ func TestNewConfig(t *testing.T) {
 		expected *Config
 	}{
 		{
+			name: "defaults",
+			expected: &Config{
+				UserAgent: "govukbot",
+			},
+		},
+		{
 			name: "env vars",
 			envVars: map[string]string{
-				"SITE": "example.com",
+				"SITE":       "example.com",
+				"USER_AGENT": "custom-agent",
 			},
 			expected: &Config{
-				Site: "example.com",
+				Site:      "example.com",
+				UserAgent: "custom-agent",
 			},
 		},
 	}

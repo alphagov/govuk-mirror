@@ -136,13 +136,16 @@ func newTestServer() *httptest.Server {
 }
 
 func TestNewCrawler(t *testing.T) {
-	cfg := &config.Config{}
+	cfg := &config.Config{
+		UserAgent: "custom-agent",
+	}
 
 	cr, err := NewCrawler(cfg)
 	assert.Nil(t, err)
 	assert.NotNil(t, cr)
 	assert.Equal(t, cfg, cr.cfg)
 	assert.IsType(t, &colly.Collector{}, cr.collector)
+	assert.Equal(t, "custom-agent", cr.collector.UserAgent)
 }
 
 func TestRun(t *testing.T) {

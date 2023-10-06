@@ -5,7 +5,8 @@ import (
 )
 
 type Config struct {
-	Site string `env:"SITE"`
+	Site      string `env:"SITE"`
+	UserAgent string `env:"USER_AGENT" envDefault:"govukbot"`
 }
 
 func NewConfig() (*Config, error) {

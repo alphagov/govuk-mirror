@@ -24,7 +24,9 @@ func NewCrawler(cfg *config.Config) (*Crawler, error) {
 }
 
 func newCollector(cfg *config.Config) (*colly.Collector, error) {
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.UserAgent(cfg.UserAgent),
+	)
 
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler)
