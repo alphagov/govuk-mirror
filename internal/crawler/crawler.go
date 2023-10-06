@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"mirrorer/internal/config"
+	"mirrorer/internal/file"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/rs/zerolog/log"
@@ -26,6 +27,9 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler)
+
+	// Save successful responses to disk
+	c.OnResponse(responseHandler)
 
 	// Handle errors
 	c.OnError(errorHandler)
@@ -55,6 +59,16 @@ func htmlHandler(e *colly.HTMLElement) {
 	err := e.Request.Visit(e.Request.AbsoluteURL(link))
 	if err != nil {
 		log.Debug().Err(err).Msg("Error attempting to visit link")
+	}
+}
+
+func responseHandler(r *colly.Response) {
+	contentType := r.Headers.Get("Content-Type")
+
+	err := file.Save(r.Request.URL, contentType, r.Body)
+
+	if err != nil {
+		log.Error().Err(err).Msg("Error saving response to disk")
 	}
 }
 
