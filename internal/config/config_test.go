@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,11 +24,12 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "env vars",
 			envVars: map[string]string{
-				"SITE":            "example.com",
-				"ALLOWED_DOMAINS": "example.com",
-				"USER_AGENT":      "custom-agent",
-				"HEADERS":         "Test-Header:Test-Value",
-				"CONCURRENCY":     "20",
+				"SITE":                 "example.com",
+				"ALLOWED_DOMAINS":      "example.com",
+				"USER_AGENT":           "custom-agent",
+				"HEADERS":              "Test-Header:Test-Value",
+				"CONCURRENCY":          "20",
+				"DISALLOWED_URL_RULES": "rule1,rule2",
 			},
 			expected: &Config{
 				Site:           "example.com",
@@ -37,6 +39,10 @@ func TestNewConfig(t *testing.T) {
 					"Test-Header": "Test-Value",
 				},
 				Concurrency: 20,
+				DisallowedURLFilters: []*regexp.Regexp{
+					regexp.MustCompile("rule1"),
+					regexp.MustCompile("rule2"),
+				},
 			},
 		},
 	}

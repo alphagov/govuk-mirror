@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/gocolly/colly/v2"
@@ -50,6 +51,7 @@ var routes = map[string]struct {
 				<script src="assets/script.js"></script>
 
 				<a href="https://disallowed.com">Visit another domain</a>
+				<a href="/disallowed">Visit another page</a>
 				<a href="/404">Visit non existent page</a>
 				<a href="/503">Visit broken page</a>
 			</body>
@@ -88,6 +90,11 @@ var routes = map[string]struct {
 		status:      http.StatusOK,
 		contentType: "text/html",
 		body:        []byte(`<!DOCTYPE html><html><head><title>Child</title></head></html>`),
+	},
+	"/disallowed": {
+		status:      http.StatusOK,
+		contentType: "text/html",
+		body:        []byte(`<!DOCTYPE html><html><head><title>Disallowed</title></head></html>`),
 	},
 	"/redirect": {
 		status:           http.StatusMovedPermanently,
@@ -145,6 +152,9 @@ func TestNewCrawler(t *testing.T) {
 	cfg := &config.Config{
 		UserAgent:      "custom-agent",
 		AllowedDomains: "example.com",
+		DisallowedURLFilters: []*regexp.Regexp{
+			regexp.MustCompile(".*disallowed.*"),
+		},
 	}
 
 	cr, err := NewCrawler(cfg)
@@ -154,6 +164,7 @@ func TestNewCrawler(t *testing.T) {
 	assert.IsType(t, &colly.Collector{}, cr.collector)
 	assert.Equal(t, "custom-agent", cr.collector.UserAgent)
 	assert.Equal(t, []string{"example.com"}, cr.collector.AllowedDomains)
+	assert.Equal(t, []*regexp.Regexp{regexp.MustCompile(".*disallowed.*")}, cr.collector.DisallowedURLFilters)
 	assert.Equal(t, true, cr.collector.Async)
 }
 
@@ -215,6 +226,9 @@ func TestRun(t *testing.T) {
 	cfg := &config.Config{
 		Site:           ts.URL,
 		AllowedDomains: hostname,
+		DisallowedURLFilters: []*regexp.Regexp{
+			regexp.MustCompile("/disallowed"),
+		},
 	}
 	cr, err := NewCrawler(cfg)
 	assert.NoError(t, err)
