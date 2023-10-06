@@ -25,11 +25,15 @@ func TestNewConfig(t *testing.T) {
 			envVars: map[string]string{
 				"SITE":        "example.com",
 				"USER_AGENT":  "custom-agent",
+				"HEADERS":     "Test-Header:Test-Value",
 				"CONCURRENCY": "20",
 			},
 			expected: &Config{
-				Site:        "example.com",
-				UserAgent:   "custom-agent",
+				Site:      "example.com",
+				UserAgent: "custom-agent",
+				Headers: map[string]string{
+					"Test-Header": "Test-Value",
+				},
 				Concurrency: 20,
 			},
 		},

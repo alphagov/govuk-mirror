@@ -35,6 +35,12 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 		return nil, err
 	}
 
+	c.OnRequest(func(r *colly.Request) {
+		for header, value := range cfg.Headers {
+			r.Headers.Set(header, value)
+		}
+	})
+
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler)
 
