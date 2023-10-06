@@ -26,6 +26,7 @@ func NewCrawler(cfg *config.Config) (*Crawler, error) {
 func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	c := colly.NewCollector(
 		colly.UserAgent(cfg.UserAgent),
+		colly.AllowedDomains(cfg.AllowedDomains),
 		colly.Async(true),
 	)
 

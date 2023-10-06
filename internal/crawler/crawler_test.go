@@ -48,6 +48,7 @@ var routes = map[string]struct {
 				<img src="/assets/image.jpg">
 				<script src="assets/script.js"></script>
 
+				<a href="https://disallowed.com">Visit another domain</a>
 				<a href="/404">Visit non existent page</a>
 				<a href="/503">Visit broken page</a>
 			</body>
@@ -137,7 +138,8 @@ func newTestServer() *httptest.Server {
 
 func TestNewCrawler(t *testing.T) {
 	cfg := &config.Config{
-		UserAgent: "custom-agent",
+		UserAgent:      "custom-agent",
+		AllowedDomains: "example.com",
 	}
 
 	cr, err := NewCrawler(cfg)
@@ -146,6 +148,7 @@ func TestNewCrawler(t *testing.T) {
 	assert.Equal(t, cfg, cr.cfg)
 	assert.IsType(t, &colly.Collector{}, cr.collector)
 	assert.Equal(t, "custom-agent", cr.collector.UserAgent)
+	assert.Equal(t, []string{"example.com"}, cr.collector.AllowedDomains)
 	assert.Equal(t, true, cr.collector.Async)
 }
 
@@ -199,7 +202,10 @@ func TestRun(t *testing.T) {
 	hostname := serverUrl.Hostname()
 
 	// Create a new crawler instance
-	cfg := &config.Config{Site: ts.URL}
+	cfg := &config.Config{
+		Site:           ts.URL,
+		AllowedDomains: hostname,
+	}
 	cr, err := NewCrawler(cfg)
 	assert.NoError(t, err)
 
