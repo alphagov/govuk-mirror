@@ -125,7 +125,7 @@ func isRedirect(status int) bool {
 	return status >= 300 && status < 400
 }
 
-func newTestServer() *httptest.Server {
+func newTestServer(t *testing.T) *httptest.Server {
 	mux := http.NewServeMux()
 
 	for path, response := range routes {
@@ -138,7 +138,10 @@ func newTestServer() *httptest.Server {
 			mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", response.contentType)
 				w.WriteHeader(response.status)
-				w.Write(response.body)
+				_, err := w.Write(response.body)
+				if err != nil {
+					t.Error("Test server unable to write response")
+				}
 			})
 		}
 	}
@@ -169,7 +172,7 @@ func TestNewCrawler(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	ts := newTestServer()
+	ts := newTestServer(t)
 	defer ts.Close()
 
 	tests := []struct {
