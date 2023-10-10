@@ -96,15 +96,15 @@ func htmlHandler(e *colly.HTMLElement) {
 	}
 
 	err := e.Request.Visit(e.Request.AbsoluteURL(link))
-	if err != nil {
-		log.Debug().Err(err).Msg("Error attempting to visit link")
+	if err != nil && !isForbiddenURLError(err) {
+		log.Error().Err(err).Msg("Error attempting to visit link")
 	}
 }
 
 func xmlHandler(e *colly.XMLElement) {
 	err := e.Request.Visit(e.Request.AbsoluteURL(e.Text))
-	if err != nil {
-		log.Debug().Err(err).Msg("Error attempting to visit link")
+	if err != nil && !isForbiddenURLError(err) {
+		log.Error().Err(err).Msg("Error attempting to visit link")
 	}
 }
 
@@ -114,7 +114,7 @@ func responseHandler(r *colly.Response) {
 	err := file.Save(r.Request.URL, contentType, r.Body)
 
 	if err != nil {
-		log.Error().Err(err).Msg("Error saving response to disk")
+		log.Error().Str("url", r.Request.URL.String()).Err(err).Msg("Error saving response to disk")
 	}
 }
 
@@ -124,4 +124,8 @@ func errorHandler(r *colly.Response, err error) {
 		return
 	}
 	log.Error().Str("url", r.Request.URL.String()).Int("status", r.StatusCode).Err(err).Msg("Error returned from request")
+}
+
+func isForbiddenURLError(err error) bool {
+	return errors.Is(err, colly.ErrForbiddenDomain) || errors.Is(err, colly.ErrForbiddenURL) || errors.Is(err, colly.ErrAlreadyVisited)
 }
