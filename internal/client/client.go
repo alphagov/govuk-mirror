@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -10,12 +9,10 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-type DisallowedURLError struct {
-	Url string
-}
+type DisallowedURLError struct{}
 
-func (r *DisallowedURLError) Error() string {
-	return fmt.Sprintf("Not following redirect to %s because its not allowed", r.Url)
+func (e DisallowedURLError) Error() string {
+	return "Not following redirect because it's not allowed"
 }
 
 func NewClient(c *colly.Collector, redirectHandler func(*http.Request, []*http.Request) error) *http.Client {
@@ -33,9 +30,7 @@ func NewClient(c *colly.Collector, redirectHandler func(*http.Request, []*http.R
 		}
 
 		if !isRequestAllowed(c, req.URL) {
-			return &DisallowedURLError{
-				Url: req.URL.String(),
-			}
+			return DisallowedURLError{}
 		}
 
 		return nil

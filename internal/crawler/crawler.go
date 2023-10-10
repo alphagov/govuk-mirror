@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"errors"
 	"mirrorer/internal/client"
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
@@ -107,5 +108,9 @@ func responseHandler(r *colly.Response) {
 }
 
 func errorHandler(r *colly.Response, err error) {
+	if errors.Is(err, client.DisallowedURLError{}) {
+		// Normal behaviour to not follow the URL, so we can just ignore this error
+		return
+	}
 	log.Error().Str("url", r.Request.URL.String()).Int("status", r.StatusCode).Err(err).Msg("Error returned from request")
 }
