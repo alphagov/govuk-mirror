@@ -51,6 +51,10 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler)
 
+	// Crawl sitemap indexes and sitemaps
+	c.OnXML("//sitemapindex/sitemap/loc", xmlHandler)
+	c.OnXML("//urlset/url/loc", xmlHandler)
+
 	// Save successful responses to disk
 	c.OnResponse(responseHandler)
 
@@ -92,6 +96,13 @@ func htmlHandler(e *colly.HTMLElement) {
 	}
 
 	err := e.Request.Visit(e.Request.AbsoluteURL(link))
+	if err != nil {
+		log.Debug().Err(err).Msg("Error attempting to visit link")
+	}
+}
+
+func xmlHandler(e *colly.XMLElement) {
+	err := e.Request.Visit(e.Request.AbsoluteURL(e.Text))
 	if err != nil {
 		log.Debug().Err(err).Msg("Error attempting to visit link")
 	}

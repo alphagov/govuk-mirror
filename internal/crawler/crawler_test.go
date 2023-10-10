@@ -57,6 +57,29 @@ var routes = map[string]struct {
 			</body>
 			</html>`),
 	},
+	"/sitemap.xml": {
+		status:      http.StatusOK,
+		contentType: "application/xml",
+		body: []byte(`<?xml version="1.0" encoding="UTF-8"?>
+					  <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+						<sitemap>
+						  <loc>/sitemap_1.xml</loc>
+						  <lastmod>2023-10-10T02:50:02+00:00</lastmod>
+						</sitemap>
+					  </sitemapindex>`),
+	},
+	"/sitemap_1.xml": {
+		status:      http.StatusOK,
+		contentType: "application/xml",
+		body: []byte(`<?xml version="1.0" encoding="UTF-8"?>
+					  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+						<url>
+						  <loc>/</loc>
+						  <lastmod>2022-09-28T12:47:39+00:00</lastmod>
+						  <priority>0.5</priority>
+						</url>
+						</urlset>`),
+	},
 	"/assets/style.css": {
 		status:      http.StatusOK,
 		contentType: "text/css",
@@ -181,6 +204,16 @@ func TestRun(t *testing.T) {
 		expectedOutput []byte
 	}{
 		{
+			name:           "Test sitemap index",
+			filePath:       "/sitemap.xml",
+			expectedOutput: routes["/sitemap.xml"].body,
+		},
+		{
+			name:           "Test sitemap 1",
+			filePath:       "/sitemap_1.xml",
+			expectedOutput: routes["/sitemap_1.xml"].body,
+		},
+		{
 			name:           "Test index.html",
 			filePath:       "/index.html",
 			expectedOutput: routes["/"].body,
@@ -227,7 +260,7 @@ func TestRun(t *testing.T) {
 
 	// Create a new crawler instance
 	cfg := &config.Config{
-		Site:           ts.URL,
+		Site:           ts.URL + "/sitemap.xml",
 		AllowedDomains: hostname,
 		DisallowedURLFilters: []*regexp.Regexp{
 			regexp.MustCompile("/disallowed"),
