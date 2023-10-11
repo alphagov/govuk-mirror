@@ -12,8 +12,8 @@ import (
 )
 
 func TestDisallowedURLError(t *testing.T) {
-	err := &DisallowedURLError{Url: "http://example.com"}
-	assert.Equal(t, "Not following redirect to http://example.com because its not allowed", err.Error())
+	err := &DisallowedURLError{}
+	assert.Equal(t, "Not following redirect because it's not allowed", err.Error())
 }
 
 func TestNewClient(t *testing.T) {
@@ -37,7 +37,7 @@ func TestNewClient(t *testing.T) {
 
 	// Ensure redirect handler is called before redirect not followed
 	err := client.CheckRedirect(redirectReq, []*http.Request{req})
-	assert.IsType(t, &DisallowedURLError{}, err)
+	assert.IsType(t, DisallowedURLError{}, err)
 	assert.True(t, called, "redirectHandler was not called")
 }
 
