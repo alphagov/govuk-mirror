@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"errors"
+	"mime"
 	"mirrorer/internal/client"
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
@@ -111,7 +112,22 @@ func xmlHandler(e *colly.XMLElement) {
 func responseHandler(r *colly.Response) {
 	contentType := r.Headers.Get("Content-Type")
 
-	err := file.Save(r.Request.URL, contentType, r.Body)
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		log.Error().Str("url", r.Request.URL.String()).Err(err).Msg("Error parsing Content-Type header")
+	}
+	if mediaType == "text/css" {
+		urls := file.FindCssUrls(r.Body)
+
+		for _, url := range urls {
+			err := r.Request.Visit(r.Request.AbsoluteURL(url))
+			if err != nil && !isForbiddenURLError(err) {
+				log.Error().Err(err).Msg("Error attempting to visit link")
+			}
+		}
+	}
+
+	err = file.Save(r.Request.URL, contentType, r.Body)
 
 	if err != nil {
 		log.Error().Str("url", r.Request.URL.String()).Err(err).Msg("Error saving response to disk")

@@ -86,17 +86,11 @@ var routes = map[string]struct {
 		body: []byte(`
 			@font-face {
 			  font-family: 'CustomFont';
-			  src: url('https://example.com/fonts/customfont.woff2') format('woff2'),
-				   url('https://example.com/fonts/customfont.woff') format('woff');
-			}
-
-			body {
-				background-image: url('https://example.com/images/background.jpg');
-				background-size: cover;
+			  src: url('https://example.com/fonts/customfont.woff2') format('woff2');
 			}
 
 			.icon {
-				background-image: url('/images/nav-icon.png');
+				background-image: url('/assets/background.png');
 				background-size: cover;}`),
 	},
 	"/assets/script.js": {
@@ -107,6 +101,11 @@ var routes = map[string]struct {
 	"/assets/image.jpg": {
 		status:      http.StatusOK,
 		contentType: "image/jpeg",
+		body:        []byte{0xff, 0xd8, 0xff, 0xd9},
+	},
+	"/assets/background.png": {
+		status:      http.StatusOK,
+		contentType: "image/png",
 		body:        []byte{0xff, 0xd8, 0xff, 0xd9},
 	},
 	"/child": {
@@ -232,6 +231,11 @@ func TestRun(t *testing.T) {
 			name:           "Test image",
 			filePath:       "/assets/image.jpg",
 			expectedOutput: routes["/assets/image.jpg"].body,
+		},
+		{
+			name:           "Test css image",
+			filePath:       "/assets/background.png",
+			expectedOutput: routes["/assets/background.png"].body,
 		},
 		{
 			name:           "Test child",

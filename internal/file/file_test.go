@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRedirectHTMLBody(t *testing.T) {
@@ -79,5 +81,36 @@ func TestGenerateFilePathTableDriven(t *testing.T) {
 		if output != tt.want {
 			t.Errorf("got %s, want %s", output, tt.want)
 		}
+	}
+}
+
+func TestFindCssUrls(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    []byte
+		expected []string
+	}{
+		{
+			name:     "basic",
+			input:    []byte(`body { background: url("/image.png"); }`),
+			expected: []string{"/image.png"},
+		},
+		{
+			name:     "multiple urls",
+			input:    []byte(`body { background: url("/image.png"); color: url('/colors.css'); font: url(/font.woff); }`),
+			expected: []string{"/image.png", "/colors.css", "/font.woff"},
+		},
+		{
+			name:     "no urls",
+			input:    []byte(`body { color: red; }`),
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := FindCssUrls(tt.input)
+			assert.Equal(t, actual, tt.expected)
+		})
 	}
 }

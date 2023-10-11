@@ -6,9 +6,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 )
+
+var cssUrlRegex = regexp.MustCompile(`url\(["']?(.*?)["']?\)`)
 
 func RedirectHTMLBody(redirectURL string) []byte {
 	body := fmt.Sprintf(`<!DOCTYPE html>
@@ -82,4 +85,13 @@ func GenerateFilePath(u *url.URL, contentType string) (string, error) {
 	finalPath := filepath.Join(append([]string{host}, segmentsSlice...)...)
 
 	return finalPath, nil
+}
+
+func FindCssUrls(body []byte) []string {
+	urls := cssUrlRegex.FindAllStringSubmatch(string(body), -1)
+	result := []string{}
+	for _, url := range urls {
+		result = append(result, url[1])
+	}
+	return result
 }
