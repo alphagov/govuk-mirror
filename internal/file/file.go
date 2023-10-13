@@ -63,22 +63,25 @@ func GenerateFilePath(u *url.URL, contentType string) (string, error) {
 
 	lastSegment := segmentsSlice[len(segmentsSlice)-1]
 
-	// Find the extension(s) based on the content type
-	extensions, err := mime.ExtensionsByType(contentType)
-	if err != nil {
-		return "", err
+	var extensions []string
+	var err error
+
+	if contentType != "" {
+		// Find the extension(s) based on the content type
+		extensions, err = mime.ExtensionsByType(contentType)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	if len(extensions) > 0 {
-		// Check for existing extension in path
-		existingExtenion := filepath.Ext(lastSegment)
+	existingExtenion := filepath.Ext(lastSegment)
 
-		// Add extension if a valid extension exists for the content type and path doesn't already have a valid extension
-		if !slices.Contains(extensions, existingExtenion) {
-			segmentsSlice[len(segmentsSlice)-1] += extensions[len(extensions)-1]
-		}
-	} else {
+	if len(extensions) == 0 && existingExtenion == "" {
 		return "", fmt.Errorf("Error determining content type")
+	}
+
+	if len(extensions) > 0 && !slices.Contains(extensions, existingExtenion) {
+		segmentsSlice[len(segmentsSlice)-1] += extensions[len(extensions)-1]
 	}
 
 	// Construct the final path by joining host and the rest of the segments

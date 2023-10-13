@@ -62,6 +62,7 @@ func TestGenerateFilePathTableDriven(t *testing.T) {
 		{"https://example.com/foo", "text/csv", "example.com/foo.csv", nil},
 		{"https://example.com/style.css", "text/css", "example.com/style.css", nil},
 		{"https://example.com/foo", "text/blah", "", errors.New("Error determining content type")},
+		{"https://example.com/foo", "", "", errors.New("Error determining content type")},
 		{"https://example.com/foo.cy", "text/html", "example.com/foo.cy.html", nil},
 		{"https://example.com/foo.html", "text/html", "example.com/foo.html", nil},
 		{"https://example.com/foo//bar", "text/html", "example.com/foo/bar.html", nil},
@@ -69,7 +70,7 @@ func TestGenerateFilePathTableDriven(t *testing.T) {
 		{"https://example.com/foo?a=b&c=d#hello", "text/html", "example.com/foo.html", nil},
 		{"https://example.com/foo#hello", "text/html", "example.com/foo.html", nil},
 		{"https://example.com/foo%20bar", "text/html", "example.com/foo%20bar.html", nil},
-		{"https://example.com/foo", "", "", errors.New("mime: no media type")},
+		{"https://example.com/foo.woff", "", "example.com/foo.woff", nil},
 	}
 
 	for _, tt := range tests {
