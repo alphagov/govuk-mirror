@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	Site                 string            `env:"SITE"`
-	AllowedDomains       string            `env:"ALLOWED_DOMAINS"`
+	AllowedDomains       []string          `env:"ALLOWED_DOMAINS" envSeparator:","`
 	UserAgent            string            `env:"USER_AGENT" envDefault:"govukbot"`
 	Headers              map[string]string `env:"HEADERS"`
 	Concurrency          int               `env:"CONCURRENCY" envDefault:"10"`

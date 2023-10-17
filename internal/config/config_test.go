@@ -25,7 +25,7 @@ func TestNewConfig(t *testing.T) {
 			name: "env vars",
 			envVars: map[string]string{
 				"SITE":                 "example.com",
-				"ALLOWED_DOMAINS":      "example.com",
+				"ALLOWED_DOMAINS":      "example.com,foo.bar",
 				"USER_AGENT":           "custom-agent",
 				"HEADERS":              "Test-Header:Test-Value",
 				"CONCURRENCY":          "20",
@@ -33,7 +33,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			expected: &Config{
 				Site:           "example.com",
-				AllowedDomains: "example.com",
+				AllowedDomains: []string{"example.com", "foo.bar"},
 				UserAgent:      "custom-agent",
 				Headers: map[string]string{
 					"Test-Header": "Test-Value",
