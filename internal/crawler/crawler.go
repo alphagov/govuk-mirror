@@ -9,29 +9,36 @@ import (
 	"net/http"
 
 	"github.com/gocolly/colly/v2"
+	"github.com/gocolly/colly/v2/queue"
 	"github.com/rs/zerolog/log"
 )
 
 type Crawler struct {
 	cfg       *config.Config
 	collector *colly.Collector
+	queue     *queue.Queue
 }
 
 func NewCrawler(cfg *config.Config) (*Crawler, error) {
-	collector, err := newCollector(cfg)
+	q, _ := queue.New(
+		cfg.Concurrency, // Number of consumer threads
+		&queue.InMemoryQueueStorage{MaxSize: 10000000}, // Use default queue storage
+	)
+
+	collector, err := newCollector(cfg, q)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Crawler{cfg: cfg, collector: collector}, nil
+	return &Crawler{cfg: cfg, collector: collector, queue: q}, nil
 }
 
-func newCollector(cfg *config.Config) (*colly.Collector, error) {
+func newCollector(cfg *config.Config, q *queue.Queue) (*colly.Collector, error) {
 	c := colly.NewCollector(
 		colly.UserAgent(cfg.UserAgent),
 		colly.AllowedDomains(cfg.AllowedDomains...),
 		colly.DisallowedURLFilters(cfg.DisallowedURLFilters...),
-		colly.Async(true),
+		//colly.Async(true),
 	)
 
 	client := client.NewClient(c, redirectHandler)
@@ -50,7 +57,27 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	})
 
 	// Set up a crawling logic
-	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler)
+	c.OnHTML("a[href], link[href], img[src], script[src]", func(e *colly.HTMLElement) {
+		var link string
+		switch e.Name {
+		case "a", "link":
+			link = e.Attr("href")
+		case "img", "script":
+			link = e.Attr("src")
+		}
+
+		err := q.AddURL(e.Request.AbsoluteURL(link))
+		if err != nil && !isForbiddenURLError(err) {
+			log.Error().Err(err).Msg("Error attempting to visit link")
+		}
+	})
+
+	xmlHandler := func(e *colly.XMLElement) {
+		err := q.AddURL(e.Request.AbsoluteURL(e.Text))
+		if err != nil && !isForbiddenURLError(err) {
+			log.Error().Err(err).Msg("Error attempting to visit link")
+		}
+	}
 
 	// Crawl sitemap indexes and sitemaps
 	c.OnXML("//sitemapindex/sitemap/loc", xmlHandler)
@@ -66,13 +93,15 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 }
 
 func (cr *Crawler) Run() {
-	// Start the crawler
-	err := cr.collector.Visit(cr.cfg.Site)
+	err := cr.queue.AddURL(cr.cfg.Site)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error queuing initial URL")
+	}
+
+	err = cr.queue.Run(cr.collector)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error starting the crawler")
 	}
-
-	cr.collector.Wait()
 }
 
 func redirectHandler(req *http.Request, via []*http.Request) error {
@@ -85,28 +114,6 @@ func redirectHandler(req *http.Request, via []*http.Request) error {
 		}
 	}
 	return nil
-}
-
-func htmlHandler(e *colly.HTMLElement) {
-	var link string
-	switch e.Name {
-	case "a", "link":
-		link = e.Attr("href")
-	case "img", "script":
-		link = e.Attr("src")
-	}
-
-	err := e.Request.Visit(e.Request.AbsoluteURL(link))
-	if err != nil && !isForbiddenURLError(err) {
-		log.Error().Err(err).Msg("Error attempting to visit link")
-	}
-}
-
-func xmlHandler(e *colly.XMLElement) {
-	err := e.Request.Visit(e.Request.AbsoluteURL(e.Text))
-	if err != nil && !isForbiddenURLError(err) {
-		log.Error().Err(err).Msg("Error attempting to visit link")
-	}
 }
 
 func responseHandler(r *colly.Response) {
