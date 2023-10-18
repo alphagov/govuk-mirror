@@ -176,7 +176,7 @@ func newTestServer(t *testing.T) *httptest.Server {
 func TestNewCrawler(t *testing.T) {
 	cfg := &config.Config{
 		UserAgent:      "custom-agent",
-		AllowedDomains: "example.com",
+		AllowedDomains: []string{"example.com"},
 		DisallowedURLFilters: []*regexp.Regexp{
 			regexp.MustCompile(".*disallowed.*"),
 		},
@@ -265,7 +265,7 @@ func TestRun(t *testing.T) {
 	// Create a new crawler instance
 	cfg := &config.Config{
 		Site:           ts.URL + "/sitemap.xml",
-		AllowedDomains: hostname,
+		AllowedDomains: []string{hostname},
 		DisallowedURLFilters: []*regexp.Regexp{
 			regexp.MustCompile("/disallowed"),
 		},
