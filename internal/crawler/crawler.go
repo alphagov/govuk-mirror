@@ -130,6 +130,13 @@ func responseHandler(r *colly.Response) {
 				log.Error().Err(err).Msg("Error attempting to visit link")
 			}
 		}
+	} else if strings.Contains(mediaType, "openxmlformats") {
+		// This is hacky work around colly's handleOnXML behaviour which
+		// considers any response body with content-type containing the substring
+		// "xml" to be parsed as XML. This is an incorrect assumption for docx,
+		// xlsx files which aren't strictly xml structured and cause parsing
+		// errors.
+		r.Headers.Set("Content-Type", strings.ReplaceAll(contentType, "xml", ""))
 	}
 
 	err = file.Save(r.Request.URL, contentType, r.Body)
