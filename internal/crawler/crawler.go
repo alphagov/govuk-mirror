@@ -7,6 +7,7 @@ import (
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
 	"net/http"
+	"strings"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/rs/zerolog/log"
@@ -94,6 +95,10 @@ func htmlHandler(e *colly.HTMLElement) {
 		link = e.Attr("href")
 	case "img", "script":
 		link = e.Attr("src")
+	}
+
+	if strings.HasPrefix(link, "#") {
+		return
 	}
 
 	err := e.Request.Visit(link)
