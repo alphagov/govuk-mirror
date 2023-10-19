@@ -7,6 +7,7 @@ import (
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
 	"net/http"
+	"strings"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/rs/zerolog/log"
@@ -96,14 +97,18 @@ func htmlHandler(e *colly.HTMLElement) {
 		link = e.Attr("src")
 	}
 
-	err := e.Request.Visit(e.Request.AbsoluteURL(link))
+	if strings.HasPrefix(link, "#") {
+		return
+	}
+
+	err := e.Request.Visit(link)
 	if err != nil && !isForbiddenURLError(err) {
 		log.Error().Err(err).Msg("Error attempting to visit link")
 	}
 }
 
 func xmlHandler(e *colly.XMLElement) {
-	err := e.Request.Visit(e.Request.AbsoluteURL(e.Text))
+	err := e.Request.Visit(e.Text)
 	if err != nil && !isForbiddenURLError(err) {
 		log.Error().Err(err).Msg("Error attempting to visit link")
 	}
@@ -120,7 +125,7 @@ func responseHandler(r *colly.Response) {
 		urls := file.FindCssUrls(r.Body)
 
 		for _, url := range urls {
-			err := r.Request.Visit(r.Request.AbsoluteURL(url))
+			err := r.Request.Visit(url)
 			if err != nil && !isForbiddenURLError(err) {
 				log.Error().Err(err).Msg("Error attempting to visit link")
 			}
