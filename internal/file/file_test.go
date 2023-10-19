@@ -60,6 +60,8 @@ func TestGenerateFilePathTableDriven(t *testing.T) {
 		{"https://example.com/foo/", "text/html", "example.com/foo/index.html", nil},
 		{"https://example.com/foo/bar", "text/html", "example.com/foo/bar.html", nil},
 		{"https://example.com/foo", "text/csv", "example.com/foo.csv", nil},
+		{"https://example.com/foo.csv", "text/csv", "example.com/foo.csv", nil},
+		{"https://example.com/foo.csv/preview", "text/html", "example.com/foo.csv/preview.html", nil},
 		{"https://example.com/style.css", "text/css", "example.com/style.css", nil},
 		{"https://example.com/foo", "text/blah", "", errors.New("Error determining content type")},
 		{"https://example.com/foo", "", "", errors.New("Error determining content type")},
