@@ -46,6 +46,7 @@ var routes = map[string]struct {
 			<body>
 				<a href="/child">Visit child</a>
 				<a href="/redirect">Visit redirect</a>
+				<a href="/spreadsheet.xlsx">Spreadsheet</a>
 				<a href="/external/redirect">Visit external redirect</a>
 				<img src="/assets/image.jpg">
 				<script src="assets/script.js"></script>
@@ -107,6 +108,11 @@ var routes = map[string]struct {
 		status:      http.StatusOK,
 		contentType: "image/png",
 		body:        []byte{0xff, 0xd8, 0xff, 0xd9},
+	},
+	"/spreadsheet.xlsx": {
+		status:      http.StatusOK,
+		contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		body:        []byte{0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00, 0x08, 0x00, 0x00, 0x00, 0x21, 0x00, 0x36, 0x9d},
 	},
 	"/child": {
 		status:      http.StatusOK,
@@ -236,6 +242,11 @@ func TestRun(t *testing.T) {
 			name:           "Test css image",
 			filePath:       "/assets/background.png",
 			expectedOutput: routes["/assets/background.png"].body,
+		},
+		{
+			name:           "Test spreadsheet",
+			filePath:       "/spreadsheet.xlsx",
+			expectedOutput: routes["/spreadsheet.xlsx"].body,
 		},
 		{
 			name:           "Test child",
