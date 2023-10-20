@@ -103,14 +103,14 @@ func htmlHandler(e *colly.HTMLElement) {
 
 	err := e.Request.Visit(link)
 	if err != nil && !isForbiddenURLError(err) {
-		log.Error().Err(err).Msg("Error attempting to visit link")
+		log.Error().Err(err).Str("link", link).Msg("Error attempting to visit link")
 	}
 }
 
 func xmlHandler(e *colly.XMLElement) {
 	err := e.Request.Visit(e.Text)
 	if err != nil && !isForbiddenURLError(err) {
-		log.Error().Err(err).Msg("Error attempting to visit link")
+		log.Error().Err(err).Str("link", e.Text).Msg("Error attempting to visit link")
 	}
 }
 
@@ -127,7 +127,7 @@ func responseHandler(r *colly.Response) {
 		for _, url := range urls {
 			err := r.Request.Visit(url)
 			if err != nil && !isForbiddenURLError(err) {
-				log.Error().Err(err).Msg("Error attempting to visit link")
+				log.Error().Err(err).Str("link", url).Msg("Error attempting to visit link")
 			}
 		}
 	} else if strings.Contains(mediaType, "openxmlformats") || strings.Contains(mediaType, "+xml") {
