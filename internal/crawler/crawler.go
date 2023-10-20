@@ -130,12 +130,13 @@ func responseHandler(r *colly.Response) {
 				log.Error().Err(err).Msg("Error attempting to visit link")
 			}
 		}
-	} else if strings.Contains(mediaType, "openxmlformats") {
-		// This is hacky work around colly's handleOnXML behaviour which
-		// considers any response body with content-type containing the substring
-		// "xml" to be parsed as XML. This is an incorrect assumption for docx,
-		// xlsx files which aren't strictly xml structured and cause parsing
-		// errors.
+	} else if strings.Contains(mediaType, "openxmlformats") || strings.Contains(mediaType, "+xml") {
+		// This is a hacky work around colly's handleOnXML behaviour which
+		// considers any response body with content-type containing the
+		// substring "xml" to be parsed as XML. This is an incorrect assumption
+		// for docx, xlsx, pptx files which aren't strictly xml structured and
+		// cause parsing errors. This also stops unnessary parsing of
+		// non-sitemap files (e.g. svg or rdf).
 		r.Headers.Set("Content-Type", strings.ReplaceAll(contentType, "xml", ""))
 	}
 
