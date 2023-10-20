@@ -48,7 +48,15 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 		for header, value := range cfg.Headers {
 			r.Headers.Set(header, value)
 		}
+		r.Ctx.Put("referral_url", r.Ctx.Get("current_url"))
+		r.Ctx.Put("current_url", r.URL.String())
 	})
+
+	// Handle errors
+	c.OnError(errorHandler)
+
+	// Save successful responses to disk
+	c.OnResponse(responseHandler)
 
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler)
@@ -56,12 +64,6 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	// Crawl sitemap indexes and sitemaps
 	c.OnXML("//sitemapindex/sitemap/loc", xmlHandler)
 	c.OnXML("//urlset/url/loc", xmlHandler)
-
-	// Save successful responses to disk
-	c.OnResponse(responseHandler)
-
-	// Handle errors
-	c.OnError(errorHandler)
 
 	return c, nil
 }
@@ -103,23 +105,26 @@ func htmlHandler(e *colly.HTMLElement) {
 
 	err := e.Request.Visit(link)
 	if err != nil && !isForbiddenURLError(err) {
-		log.Error().Err(err).Msg("Error attempting to visit link")
+		referralURL := e.Request.Ctx.Get("referral_url")
+		log.Error().Err(err).Str("referral_url", referralURL).Str("link", link).Msg("Error attempting to visit link")
 	}
 }
 
 func xmlHandler(e *colly.XMLElement) {
 	err := e.Request.Visit(e.Text)
 	if err != nil && !isForbiddenURLError(err) {
-		log.Error().Err(err).Msg("Error attempting to visit link")
+		referralURL := e.Request.Ctx.Get("referral_url")
+		log.Error().Err(err).Str("referral_url", referralURL).Str("link", e.Text).Msg("Error attempting to visit link")
 	}
 }
 
 func responseHandler(r *colly.Response) {
+	referralURL := r.Request.Ctx.Get("referral_url")
 	contentType := r.Headers.Get("Content-Type")
 
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		log.Error().Str("url", r.Request.URL.String()).Err(err).Msg("Error parsing Content-Type header")
+		log.Error().Err(err).Str("referral_url", referralURL).Str("url", r.Request.URL.String()).Msg("Error parsing Content-Type header")
 	}
 	if mediaType == "text/css" {
 		urls := file.FindCssUrls(r.Body)
@@ -127,7 +132,7 @@ func responseHandler(r *colly.Response) {
 		for _, url := range urls {
 			err := r.Request.Visit(url)
 			if err != nil && !isForbiddenURLError(err) {
-				log.Error().Err(err).Msg("Error attempting to visit link")
+				log.Error().Err(err).Str("referral_url", referralURL).Str("link", url).Msg("Error attempting to visit link")
 			}
 		}
 	} else if strings.Contains(mediaType, "openxmlformats") || strings.Contains(mediaType, "+xml") {
@@ -143,7 +148,7 @@ func responseHandler(r *colly.Response) {
 	err = file.Save(r.Request.URL, contentType, r.Body)
 
 	if err != nil {
-		log.Error().Str("url", r.Request.URL.String()).Err(err).Msg("Error saving response to disk")
+		log.Error().Err(err).Str("referral_url", referralURL).Str("url", r.Request.URL.String()).Msg("Error saving response to disk")
 	}
 }
 
@@ -152,7 +157,9 @@ func errorHandler(r *colly.Response, err error) {
 		// Normal behaviour to not follow the URL, so we can just ignore this error
 		return
 	}
-	log.Error().Str("url", r.Request.URL.String()).Int("status", r.StatusCode).Err(err).Msg("Error returned from request")
+
+	referralURL := r.Request.Ctx.Get("referral_url")
+	log.Error().Err(err).Int("status", r.StatusCode).Str("referral_url", referralURL).Str("url", r.Request.URL.String()).Msg("Error returned from request")
 }
 
 func isForbiddenURLError(err error) bool {
