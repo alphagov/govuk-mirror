@@ -3,6 +3,7 @@ package crawler
 import (
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
+	"mirrorer/internal/mime"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -272,6 +273,12 @@ func TestRun(t *testing.T) {
 
 	serverUrl, _ := url.Parse(ts.URL)
 	hostname := serverUrl.Hostname()
+
+	// Make mime types across consistent different systems
+	err := mime.LoadAdditionalMimeTypes()
+	if err != nil {
+		t.Fatalf("could not load mimetypes: %v", err)
+	}
 
 	// Create a new crawler instance
 	cfg := &config.Config{
