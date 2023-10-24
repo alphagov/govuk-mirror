@@ -48,8 +48,6 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 		for header, value := range cfg.Headers {
 			r.Headers.Set(header, value)
 		}
-		r.Ctx.Put("refURL", r.Ctx.Get("currentURL"))
-		r.Ctx.Put("currentURL", r.URL.String())
 	})
 
 	// Handle errors
@@ -103,30 +101,25 @@ func htmlHandler(e *colly.HTMLElement) {
 		return
 	}
 
-	refURL := e.Request.Ctx.Get("refURL")
-
 	err := e.Request.Visit(link)
 	if err != nil && !isForbiddenURLError(err) {
-		log.Error().Err(err).Str("refURL", refURL).Str("link", link).Msg("Error attempting to visit link")
+		log.Error().Err(err).Str("link", link).Msg("Error attempting to visit link")
 	}
 }
 
 func xmlHandler(e *colly.XMLElement) {
-	refURL := e.Request.Ctx.Get("refURL")
-
 	err := e.Request.Visit(e.Text)
 	if err != nil && !isForbiddenURLError(err) {
-		log.Error().Err(err).Str("refURL", refURL).Str("link", e.Text).Msg("Error attempting to visit link")
+		log.Error().Err(err).Str("link", e.Text).Msg("Error attempting to visit link")
 	}
 }
 
 func responseHandler(r *colly.Response) {
-	refURL := r.Request.Ctx.Get("refURL")
 	contentType := r.Headers.Get("Content-Type")
 
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		log.Error().Err(err).Str("refURL", refURL).Str("url", r.Request.URL.String()).Msg("Error parsing Content-Type header")
+		log.Error().Err(err).Str("url", r.Request.URL.String()).Msg("Error parsing Content-Type header")
 	}
 	if mediaType == "text/css" {
 		urls := file.FindCssUrls(r.Body)
@@ -134,7 +127,7 @@ func responseHandler(r *colly.Response) {
 		for _, url := range urls {
 			err := r.Request.Visit(url)
 			if err != nil && !isForbiddenURLError(err) {
-				log.Error().Err(err).Str("refURL", refURL).Str("link", url).Msg("Error attempting to visit link")
+				log.Error().Err(err).Str("link", url).Msg("Error attempting to visit link")
 			}
 		}
 	} else if strings.Contains(mediaType, "openxmlformats") || strings.Contains(mediaType, "+xml") {
@@ -150,7 +143,7 @@ func responseHandler(r *colly.Response) {
 	err = file.Save(r.Request.URL, contentType, r.Body)
 
 	if err != nil {
-		log.Error().Err(err).Str("refURL", refURL).Str("url", r.Request.URL.String()).Msg("Error saving response to disk")
+		log.Error().Err(err).Str("url", r.Request.URL.String()).Msg("Error saving response to disk")
 	}
 }
 
@@ -160,8 +153,7 @@ func errorHandler(r *colly.Response, err error) {
 		return
 	}
 
-	refURL := r.Request.Ctx.Get("refURL")
-	log.Error().Err(err).Int("status", r.StatusCode).Str("refURL", refURL).Str("url", r.Request.URL.String()).Msg("Error returned from request")
+	log.Error().Err(err).Int("status", r.StatusCode).Str("url", r.Request.URL.String()).Msg("Error returned from request")
 }
 
 func isForbiddenURLError(err error) bool {
