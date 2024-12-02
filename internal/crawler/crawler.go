@@ -31,6 +31,7 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	c := colly.NewCollector(
 		colly.UserAgent(cfg.UserAgent),
 		colly.AllowedDomains(cfg.AllowedDomains...),
+		colly.URLFilters(cfg.URLFilters...),
 		colly.DisallowedURLFilters(cfg.DisallowedURLFilters...),
 		colly.Async(true),
 	)

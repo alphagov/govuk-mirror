@@ -44,6 +44,7 @@ func TestNewClient(t *testing.T) {
 func TestIsRequestAllowedTableDriven(t *testing.T) {
 	tests := []struct {
 		name            string
+		allowedURLs     []*regexp.Regexp
 		disallowedURLs  []*regexp.Regexp
 		allowedDomains  []string
 		url             string
@@ -57,6 +58,12 @@ func TestIsRequestAllowedTableDriven(t *testing.T) {
 		{
 			name:            "disallowed URL filter",
 			disallowedURLs:  []*regexp.Regexp{regexp.MustCompile("http://example.com")},
+			url:             "http://example.com",
+			expectedAllowed: false,
+		},
+		{
+			name:            "URL filter",
+			allowedURLs:     []*regexp.Regexp{regexp.MustCompile("https://www.gov.uk")},
 			url:             "http://example.com",
 			expectedAllowed: false,
 		},
@@ -78,6 +85,7 @@ func TestIsRequestAllowedTableDriven(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := colly.NewCollector()
 			c.DisallowedURLFilters = tt.disallowedURLs
+			c.URLFilters = tt.allowedURLs
 			c.AllowedDomains = tt.allowedDomains
 			parsedURL, _ := url.Parse(tt.url)
 			assert.Equal(t, tt.expectedAllowed, isRequestAllowed(c, parsedURL))

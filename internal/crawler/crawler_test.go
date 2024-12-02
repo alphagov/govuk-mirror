@@ -184,6 +184,9 @@ func TestNewCrawler(t *testing.T) {
 	cfg := &config.Config{
 		UserAgent:      "custom-agent",
 		AllowedDomains: []string{"example.com"},
+		URLFilters: []*regexp.Regexp{
+			regexp.MustCompile(".*"),
+		},
 		DisallowedURLFilters: []*regexp.Regexp{
 			regexp.MustCompile(".*disallowed.*"),
 		},
@@ -196,6 +199,7 @@ func TestNewCrawler(t *testing.T) {
 	assert.IsType(t, &colly.Collector{}, cr.collector)
 	assert.Equal(t, "custom-agent", cr.collector.UserAgent)
 	assert.Equal(t, []string{"example.com"}, cr.collector.AllowedDomains)
+	assert.Equal(t, []*regexp.Regexp{regexp.MustCompile(".*")}, cr.collector.URLFilters)
 	assert.Equal(t, []*regexp.Regexp{regexp.MustCompile(".*disallowed.*")}, cr.collector.DisallowedURLFilters)
 	assert.Equal(t, true, cr.collector.Async)
 }
@@ -284,6 +288,9 @@ func TestRun(t *testing.T) {
 	cfg := &config.Config{
 		Site:           ts.URL + "/sitemap.xml",
 		AllowedDomains: []string{hostname},
+		URLFilters: []*regexp.Regexp{
+			regexp.MustCompile(".*"),
+		},
 		DisallowedURLFilters: []*regexp.Regexp{
 			regexp.MustCompile("/disallowed"),
 		},

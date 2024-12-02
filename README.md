@@ -17,5 +17,7 @@ Configuration is handled through environment variables as listed below:
     - Example: `HEADERS=Rate-Limit-Token:ABC123,X-Header:X-Value`
 - CONCURRENCY: Controls the number of concurrent requests, useful for controlling request rate.
     - Example: `CONCURRENCY=10`
+- URL_RULES: A comma-separated list of regex patterns matching URLs that the crawler should crawl. All other URLs will be avoided.
+    - Example: `URL_RULES=https://www.gov.uk/.*`
 - DISALLOWED_URL_RULES: A comma-separated list of regex patterns matching URLs that the crawler should avoid.
     - Example: `DISALLOWED_URL_RULES=/search/.*,/government/.*\.atom`
