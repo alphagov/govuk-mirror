@@ -13,6 +13,7 @@ type Config struct {
 	UserAgent            string            `env:"USER_AGENT" envDefault:"govukbot"`
 	Headers              map[string]string `env:"HEADERS"`
 	Concurrency          int               `env:"CONCURRENCY" envDefault:"10"`
+	URLFilters           []*regexp.Regexp  `env:"URL_RULES" envSeparator:","`
 	DisallowedURLFilters []*regexp.Regexp  `env:"DISALLOWED_URL_RULES" envSeparator:","`
 }
 

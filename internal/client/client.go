@@ -42,6 +42,12 @@ func NewClient(c *colly.Collector, redirectHandler func(*http.Request, []*http.R
 func isRequestAllowed(c *colly.Collector, parsedURL *url.URL) bool {
 	u := []byte(parsedURL.String())
 
+	for _, r := range c.URLFilters {
+		if !r.Match(u) {
+			return false
+		}
+	}
+
 	for _, r := range c.DisallowedURLFilters {
 		if r.Match(u) {
 			return false

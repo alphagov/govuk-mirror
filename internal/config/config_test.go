@@ -29,7 +29,8 @@ func TestNewConfig(t *testing.T) {
 				"USER_AGENT":           "custom-agent",
 				"HEADERS":              "Test-Header:Test-Value",
 				"CONCURRENCY":          "20",
-				"DISALLOWED_URL_RULES": "rule1,rule2",
+				"URL_RULES":            "rule1,rule2",
+				"DISALLOWED_URL_RULES": "rule3,rule4",
 			},
 			expected: &Config{
 				Site:           "example.com",
@@ -39,9 +40,13 @@ func TestNewConfig(t *testing.T) {
 					"Test-Header": "Test-Value",
 				},
 				Concurrency: 20,
-				DisallowedURLFilters: []*regexp.Regexp{
+				URLFilters: []*regexp.Regexp{
 					regexp.MustCompile("rule1"),
 					regexp.MustCompile("rule2"),
+				},
+				DisallowedURLFilters: []*regexp.Regexp{
+					regexp.MustCompile("rule3"),
+					regexp.MustCompile("rule4"),
 				},
 			},
 		},
