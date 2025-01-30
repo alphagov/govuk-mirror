@@ -12,4 +12,4 @@ unit_tests:
 	go test -v ./...
 
 update_deps:
-	go get -t -u ./... && go mod tidy && go mod vendor
+	go get -t -u ./... && go mod tidy
