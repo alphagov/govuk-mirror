@@ -54,7 +54,7 @@ func isRequestAllowed(c *colly.Collector, parsedURL *url.URL) bool {
 		}
 	}
 
-	if c.AllowedDomains == nil || len(c.AllowedDomains) == 0 {
+	if len(c.AllowedDomains) == 0 {
 		return true
 	}
 	for _, d := range c.AllowedDomains {
