@@ -1,8 +1,6 @@
 module mirrorer
 
-go 1.23
-
-toolchain go1.23.5
+go 1.23.5
 
 require (
 	github.com/caarlos0/env/v9 v9.0.0
