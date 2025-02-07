@@ -1,6 +1,6 @@
 module mirrorer
 
-go 1.22.2
+go 1.23.5
 
 require (
 	github.com/caarlos0/env/v9 v9.0.0
