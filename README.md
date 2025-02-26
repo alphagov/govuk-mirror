@@ -21,3 +21,8 @@ Configuration is handled through environment variables as listed below:
     - Example: `URL_RULES=https://www.gov.uk/.*`
 - DISALLOWED_URL_RULES: A comma-separated list of regex patterns matching URLs that the crawler should avoid.
     - Example: `DISALLOWED_URL_RULES=/search/.*,/government/.*\.atom`
+
+## How to deploy
+
+This needs manual deployment to staging and production. Once the `Release` GitHub Action has run select the `Run workflow` 
+option from the `Deploy` GitHub action. Then enter the latest tag number and the environment to deploy to.
