@@ -40,5 +40,4 @@ jobs:
         with:
           version: v1.60
           # caching issues, see: https://github.com/golangci/golangci-lint-action/issues/244#issuecomment-1052190775
-          skip-pkg-cache: true
-          skip-build-cache: true
+          skip-cache: true
