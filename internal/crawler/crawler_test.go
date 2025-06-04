@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"fmt"
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
 	"mirrorer/internal/mime"
@@ -298,7 +299,11 @@ func TestRun(t *testing.T) {
 	cr, err := NewCrawler(cfg)
 	assert.NoError(t, err)
 
-	defer os.RemoveAll(hostname)
+	defer func() {
+		if err := os.RemoveAll(hostname); err != nil {
+			fmt.Println("Error when removing:", err)
+		}
+	}()
 
 	cr.Run()
 
