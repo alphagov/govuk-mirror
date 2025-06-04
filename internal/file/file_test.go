@@ -2,6 +2,7 @@ package file
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"testing"
@@ -45,11 +46,15 @@ func TestSave(t *testing.T) {
 	if string(content) != string(body) {
 		t.Errorf("file to contain %v, got %v", body, content)
 	}
-	defer os.RemoveAll("example.com")
+	defer func() {
+		if err := os.RemoveAll("example.com"); err != nil {
+			fmt.Println("Error when removing:", err)
+		}
+	}()
 }
 
 func TestGenerateFilePathTableDriven(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		url, contentType string
 		want             string
 		wantErr          error
