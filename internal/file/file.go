@@ -77,7 +77,7 @@ func GenerateFilePath(u *url.URL, contentType string) (string, error) {
 	existingExtenion := filepath.Ext(lastSegment)
 
 	if len(extensions) == 0 && existingExtenion == "" {
-		return "", fmt.Errorf("Error determining content type")
+		return "", fmt.Errorf("error determining content type")
 	}
 
 	if len(extensions) > 0 && !slices.Contains(extensions, existingExtenion) {

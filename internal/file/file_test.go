@@ -2,6 +2,7 @@ package file
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"testing"
@@ -45,11 +46,15 @@ func TestSave(t *testing.T) {
 	if string(content) != string(body) {
 		t.Errorf("file to contain %v, got %v", body, content)
 	}
-	defer os.RemoveAll("example.com")
+	defer func() {
+		if err := os.RemoveAll("example.com"); err != nil {
+			fmt.Println("Error when removing:", err)
+		}
+	}()
 }
 
 func TestGenerateFilePathTableDriven(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		url, contentType string
 		want             string
 		wantErr          error
@@ -63,8 +68,8 @@ func TestGenerateFilePathTableDriven(t *testing.T) {
 		{"https://example.com/foo.csv", "text/csv", "example.com/foo.csv", nil},
 		{"https://example.com/foo.csv/preview", "text/html", "example.com/foo.csv/preview.html", nil},
 		{"https://example.com/style.css", "text/css", "example.com/style.css", nil},
-		{"https://example.com/foo", "text/blah", "", errors.New("Error determining content type")},
-		{"https://example.com/foo", "", "", errors.New("Error determining content type")},
+		{"https://example.com/foo", "text/blah", "", errors.New("error determining content type")},
+		{"https://example.com/foo", "", "", errors.New("error determining content type")},
 		{"https://example.com/foo.cy", "text/html", "example.com/foo.cy.html", nil},
 		{"https://example.com/foo.html", "text/html", "example.com/foo.html", nil},
 		{"https://example.com/foo//bar", "text/html", "example.com/foo/bar.html", nil},

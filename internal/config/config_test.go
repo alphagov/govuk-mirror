@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"testing"
@@ -56,8 +57,12 @@ func TestNewConfig(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// Set environment variables
 			for k, v := range test.envVars {
-				os.Setenv(k, v)
-				defer os.Unsetenv(k) // Clean up
+				_ = os.Setenv(k, v)
+				defer func() {
+					if err := os.Unsetenv(k); err != nil {
+						fmt.Println("Error when unsetting:", err)
+					}
+				}()
 			}
 
 			cfg, err := NewConfig()
