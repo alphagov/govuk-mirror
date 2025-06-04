@@ -155,5 +155,5 @@ func errorHandler(r *colly.Response, err error) {
 }
 
 func isForbiddenURLError(err error) bool {
-	return errors.Is(err, colly.ErrForbiddenDomain) || errors.Is(err, colly.ErrForbiddenURL) || errors.Is(err, &colly.AlreadyVisitedError{})
+	return errors.Is(err, colly.ErrForbiddenDomain) || errors.Is(err, colly.ErrForbiddenURL) || errors.As(err, new(*colly.AlreadyVisitedError))
 }
