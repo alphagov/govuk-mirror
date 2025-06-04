@@ -40,7 +40,6 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	c.SetClient(client)
 
 	err := c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: cfg.Concurrency})
-
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +80,6 @@ func redirectHandler(req *http.Request, via []*http.Request) error {
 	for _, redirectReq := range via {
 		body := file.RedirectHTMLBody(req.URL.String())
 		err := file.Save(redirectReq.URL, "text/html", body)
-
 		if err != nil {
 			return err
 		}
@@ -142,7 +140,6 @@ func responseHandler(r *colly.Response) {
 	}
 
 	err = file.Save(r.Request.URL, contentType, r.Body)
-
 	if err != nil {
 		log.Error().Err(err).Str("url", r.Request.URL.String()).Msg("Error saving response to disk")
 	}
@@ -158,5 +155,5 @@ func errorHandler(r *colly.Response, err error) {
 }
 
 func isForbiddenURLError(err error) bool {
-	return errors.Is(err, colly.ErrForbiddenDomain) || errors.Is(err, colly.ErrForbiddenURL) || errors.Is(err, colly.ErrAlreadyVisited)
+	return errors.Is(err, colly.ErrForbiddenDomain) || errors.Is(err, colly.ErrForbiddenURL) || errors.Is(err, &colly.AlreadyVisitedError{})
 }
