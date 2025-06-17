@@ -11,7 +11,7 @@ Configuration is handled through environment variables as listed below:
     - Example: `SITE=https://www.gov.uk`
 - ALLOWED_DOMAINS: A comma-separated list of hostnames permitted to be crawled.
     - Example: `ALLOWED_DOMAINS=domain1.com,domain2.com`
-- USER_AGENT: Customizes the user agent for requests. Defaults to `govukbot` if not specified.
+- USER_AGENT: Customizes the user agent for requests. Defaults to `govuk-mirror-bot` if not specified.
     - Example: `USER_AGENT=custom-user-agent`
 - HEADERS: Provides custom headers for requests.
     - Example: `HEADERS=Rate-Limit-Token:ABC123,X-Header:X-Value`
