@@ -10,7 +10,7 @@ import (
 type Config struct {
 	Site                 string            `env:"SITE"`
 	AllowedDomains       []string          `env:"ALLOWED_DOMAINS" envSeparator:","`
-	UserAgent            string            `env:"USER_AGENT" envDefault:"govukbot"`
+	UserAgent            string            `env:"USER_AGENT" envDefault:"govuk-mirror-bot"`
 	Headers              map[string]string `env:"HEADERS"`
 	Concurrency          int               `env:"CONCURRENCY" envDefault:"10"`
 	URLFilters           []*regexp.Regexp  `env:"URL_RULES" envSeparator:","`

@@ -18,7 +18,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "defaults",
 			expected: &Config{
-				UserAgent:   "govukbot",
+				UserAgent:   "govuk-mirror-bot",
 				Concurrency: 10,
 			},
 		},
