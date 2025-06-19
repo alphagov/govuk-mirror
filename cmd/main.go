@@ -17,8 +17,11 @@ func main() {
 	cfg := initConfig()
 
 	// Validate that the SITE URL and allowed domains are accessible before crawling
-	err := crawler.ValidateCrawlerConfig(cfg, 10*time.Second)
-	checkError(err, "Configuration validation failed")
+	// Skip validation if SKIP_VALIDATION=true for offline testing
+	if !cfg.SkipValidation {
+		err := crawler.ValidateCrawlerConfig(cfg, 10*time.Second)
+		checkError(err, "Configuration validation failed")
+	}
 
 	cr, err := crawler.NewCrawler(cfg)
 	checkError(err, "Error creating new crawler")
