@@ -3,11 +3,10 @@ package crawler
 import (
 	"context"
 	"fmt"
+	"mirrorer/internal/config"
 	"net/http"
 	"net/url"
 	"time"
-
-	"mirrorer/internal/config"
 )
 
 // ValidateCrawlerConfig checks if the configured domains are accessible
@@ -70,8 +69,11 @@ func isDomainAccessible(testURL string, timeout time.Duration) bool {
 	if err != nil {
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// Consider 2xx and 3xx status codes as accessible
 	return resp.StatusCode >= 200 && resp.StatusCode < 400
 }
+
