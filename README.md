@@ -21,6 +21,8 @@ Configuration is handled through environment variables as listed below:
     - Example: `URL_RULES=https://www-origin.publishing.service.gov.uk/.*`
 - DISALLOWED_URL_RULES: A comma-separated list of regex patterns matching URLs that the crawler should avoid.
     - Example: `DISALLOWED_URL_RULES=/search/.*,/government/.*\.atom`
+- SKIP_VALIDATION: Skip domain accessibility validation before crawling. Useful for offline testing.
+    - Example: `SKIP_VALIDATION=true`
 
 ## How to deploy
 

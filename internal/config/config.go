@@ -15,6 +15,7 @@ type Config struct {
 	Concurrency          int               `env:"CONCURRENCY" envDefault:"10"`
 	URLFilters           []*regexp.Regexp  `env:"URL_RULES" envSeparator:","`
 	DisallowedURLFilters []*regexp.Regexp  `env:"DISALLOWED_URL_RULES" envSeparator:","`
+	SkipValidation       bool              `env:"SKIP_VALIDATION" envDefault:"false"`
 }
 
 func NewConfig() (*Config, error) {

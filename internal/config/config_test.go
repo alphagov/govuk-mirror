@@ -18,8 +18,9 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "defaults",
 			expected: &Config{
-				UserAgent:   "govuk-mirror-bot",
-				Concurrency: 10,
+				UserAgent:      "govuk-mirror-bot",
+				Concurrency:    10,
+				SkipValidation: false,
 			},
 		},
 		{
@@ -32,6 +33,7 @@ func TestNewConfig(t *testing.T) {
 				"CONCURRENCY":          "20",
 				"URL_RULES":            "rule1,rule2",
 				"DISALLOWED_URL_RULES": "rule3,rule4",
+				"SKIP_VALIDATION":      "true",
 			},
 			expected: &Config{
 				Site:           "example.com",
@@ -49,6 +51,7 @@ func TestNewConfig(t *testing.T) {
 					regexp.MustCompile("rule3"),
 					regexp.MustCompile("rule4"),
 				},
+				SkipValidation: true,
 			},
 		},
 	}
