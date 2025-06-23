@@ -11,5 +11,10 @@ lint:
 unit_tests:
 	go test -v ./...
 
+test-local:
+	@echo "Running local GOV.UK mirror test..."
+	@echo "This will scrape from staging - press Ctrl+C when you have enough test data"
+	./local-test.sh
+
 update_deps:
 	go get -t -u ./... && go mod tidy
