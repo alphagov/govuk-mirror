@@ -14,7 +14,6 @@ on:
         required: true
         type: choice
         options:
-        - integration
         - staging
         - production
         default: 'integration'
