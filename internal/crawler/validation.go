@@ -14,7 +14,7 @@ import (
 func ValidateCrawlerConfig(cfg *config.Config, timeout time.Duration) error {
 	// Check main site URL
 	if cfg.Site != "" {
-		if !isDomainAccessible(cfg.Site, timeout) {
+		if !isDomainAccessibleWithConfig(cfg.Site, cfg, timeout) {
 			return &DomainNotAccessibleError{Domain: cfg.Site}
 		}
 	}
@@ -22,7 +22,7 @@ func ValidateCrawlerConfig(cfg *config.Config, timeout time.Duration) error {
 	// Check all allowed domains
 	for _, domain := range cfg.AllowedDomains {
 		testURL := "https://" + domain
-		if !isDomainAccessible(testURL, timeout) {
+		if !isDomainAccessibleWithConfig(testURL, cfg, timeout) {
 			return &DomainNotAccessibleError{Domain: domain}
 		}
 	}
@@ -39,8 +39,8 @@ func (e *DomainNotAccessibleError) Error() string {
 	return fmt.Sprintf("domain not accessible: %s (hint: www-origin.publishing.service.gov.uk is not externally accessible, use www.gov.uk instead)", e.Domain)
 }
 
-// isDomainAccessible checks if a domain responds to HTTP requests
-func isDomainAccessible(testURL string, timeout time.Duration) bool {
+// isDomainAccessibleWithConfig checks if a domain responds using the same config as Colly
+func isDomainAccessibleWithConfig(testURL string, cfg *config.Config, timeout time.Duration) bool {
 	parsedURL, err := url.Parse(testURL)
 	if err != nil {
 		return false
@@ -60,9 +60,18 @@ func isDomainAccessible(testURL string, timeout time.Duration) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "HEAD", parsedURL.String(), nil)
+	// Use GET instead of HEAD to match Colly behavior
+	req, err := http.NewRequestWithContext(ctx, "GET", parsedURL.String(), nil)
 	if err != nil {
 		return false
+	}
+
+	// Set User-Agent to match Colly configuration
+	req.Header.Set("User-Agent", cfg.UserAgent)
+
+	// Add custom headers from configuration
+	for key, value := range cfg.Headers {
+		req.Header.Set(key, value)
 	}
 
 	resp, err := client.Do(req)
@@ -76,4 +85,5 @@ func isDomainAccessible(testURL string, timeout time.Duration) bool {
 	// Consider 2xx and 3xx status codes as accessible
 	return resp.StatusCode >= 200 && resp.StatusCode < 400
 }
+
 
