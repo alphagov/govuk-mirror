@@ -86,41 +86,4 @@ func isDomainAccessibleWithConfig(testURL string, cfg *config.Config, timeout ti
 	return resp.StatusCode >= 200 && resp.StatusCode < 400
 }
 
-// isDomainAccessible checks if a domain responds to HTTP requests (legacy function)
-func isDomainAccessible(testURL string, timeout time.Duration) bool {
-	parsedURL, err := url.Parse(testURL)
-	if err != nil {
-		return false
-	}
-
-	client := &http.Client{
-		Timeout: timeout,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// Allow redirects but limit to 5
-			if len(via) >= 5 {
-				return http.ErrUseLastResponse
-			}
-			return nil
-		},
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "HEAD", parsedURL.String(), nil)
-	if err != nil {
-		return false
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return false
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	// Consider 2xx and 3xx status codes as accessible
-	return resp.StatusCode >= 200 && resp.StatusCode < 400
-}
 
