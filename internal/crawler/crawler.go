@@ -142,6 +142,8 @@ func responseHandler(r *colly.Response) {
 	err = file.Save(r.Request.URL, contentType, r.Body)
 	if err != nil {
 		log.Error().Err(err).Str("url", r.Request.URL.String()).Msg("Error saving response to disk")
+	} else {
+		log.Info().Str("url", r.Request.URL.String()).Str("type", mediaType).Msg("Downloaded file")
 	}
 }
 
