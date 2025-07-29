@@ -6,6 +6,7 @@ import (
 	"mirrorer/internal/config"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -21,6 +22,11 @@ func ValidateCrawlerConfig(cfg *config.Config, timeout time.Duration) error {
 
 	// Check all allowed domains
 	for _, domain := range cfg.AllowedDomains {
+		// Skip validation for asset domains that don't serve content at root
+		if isAssetDomain(domain) {
+			continue
+		}
+		
 		testURL := "https://" + domain
 		if !isDomainAccessibleWithConfig(testURL, cfg, timeout) {
 			return &DomainNotAccessibleError{Domain: domain}
@@ -36,7 +42,7 @@ type DomainNotAccessibleError struct {
 }
 
 func (e *DomainNotAccessibleError) Error() string {
-	return fmt.Sprintf("domain not accessible: %s (hint: www-origin.publishing.service.gov.uk is not externally accessible, use www.gov.uk instead)", e.Domain)
+	return fmt.Sprintf("domain not accessible: %s", e.Domain)
 }
 
 // isDomainAccessibleWithConfig checks if a domain responds using the same config as Colly
@@ -86,4 +92,9 @@ func isDomainAccessibleWithConfig(testURL string, cfg *config.Config, timeout ti
 	return resp.StatusCode >= 200 && resp.StatusCode < 400
 }
 
-
+// isAssetDomain checks if a domain is an asset server that doesn't serve content at root
+func isAssetDomain(domain string) bool {
+	// Check for assets.publishing.service.gov.uk and its staging variants
+	return strings.HasPrefix(strings.ToLower(domain), "assets.") && 
+		   strings.HasSuffix(strings.ToLower(domain), ".publishing.service.gov.uk")
+}
