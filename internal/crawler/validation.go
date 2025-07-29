@@ -94,7 +94,5 @@ func isDomainAccessibleWithConfig(testURL string, cfg *config.Config, timeout ti
 
 // isAssetDomain checks if a domain is an asset server that doesn't serve content at root
 func isAssetDomain(domain string) bool {
-	// Check for assets.publishing.service.gov.uk and its staging variants
-	return strings.HasPrefix(strings.ToLower(domain), "assets.") && 
-		   strings.HasSuffix(strings.ToLower(domain), ".publishing.service.gov.uk")
+	return strings.HasPrefix(strings.ToLower(domain), "assets.")
 }
