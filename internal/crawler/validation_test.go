@@ -1,10 +1,9 @@
 package crawler
 
 import (
+	"mirrorer/internal/config"
 	"testing"
 	"time"
-
-	"mirrorer/internal/config"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,16 +26,16 @@ func TestValidateCrawlerConfig(t *testing.T) {
 			description:    "Should pass with accessible domain",
 		},
 		{
-			name:           "inaccessible origin domain",
-			site:           "https://www-origin.publishing.service.gov.uk",
-			allowedDomains: []string{"www-origin.publishing.service.gov.uk"},
+			name:           "inaccessible domain",
+			site:           "https://definitely-does-not-exist.example.com",
+			allowedDomains: []string{"definitely-does-not-exist.example.com"},
 			expectError:    true,
-			description:    "Should fail with inaccessible origin domain",
+			description:    "Should fail with inaccessible domain",
 		},
 		{
 			name:           "mixed domains",
 			site:           "https://www.gov.uk",
-			allowedDomains: []string{"www.gov.uk", "www-origin.publishing.service.gov.uk"},
+			allowedDomains: []string{"www.gov.uk", "definitely-does-not-exist.example.com"},
 			expectError:    true,
 			description:    "Should fail if any allowed domain is inaccessible",
 		},
@@ -74,7 +73,8 @@ func TestValidateCrawlerConfig(t *testing.T) {
 }
 
 func TestDomainNotAccessibleError(t *testing.T) {
-	err := &DomainNotAccessibleError{Domain: "www-origin.publishing.service.gov.uk"}
-	expectedMsg := "domain not accessible: www-origin.publishing.service.gov.uk (hint: www-origin.publishing.service.gov.uk is not externally accessible, use www.gov.uk instead)"
+	err := &DomainNotAccessibleError{Domain: "definitely-does-not-exist.example.com"}
+	expectedMsg := "domain not accessible: definitely-does-not-exist.example.com"
 	assert.Equal(t, expectedMsg, err.Error())
 }
+
