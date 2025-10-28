@@ -8,6 +8,7 @@ import (
 	"mirrorer/internal/file"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/rs/zerolog/log"
@@ -27,6 +28,15 @@ func NewCrawler(cfg *config.Config) (*Crawler, error) {
 	return &Crawler{cfg: cfg, collector: collector}, nil
 }
 
+func RequestDelay(maxRequestsPerSecond int, parallelism int) time.Duration {
+	// not the time taken to process the request
+	// but to send it and queue it to be processed later
+	avgRequestTime := 4 * time.Millisecond
+
+	singleThreadWaitTime := (1 * time.Second / time.Duration(maxRequestsPerSecond)) - avgRequestTime
+	return singleThreadWaitTime * time.Duration(parallelism)
+}
+
 func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	c := colly.NewCollector(
 		colly.UserAgent(cfg.UserAgent),
@@ -39,7 +49,11 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	client := client.NewClient(c, redirectHandler)
 	c.SetClient(client)
 
-	err := c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: cfg.Concurrency})
+	err := c.Limit(&colly.LimitRule{
+		DomainGlob:  "*",
+		Parallelism: cfg.Concurrency,
+		Delay:       RequestDelay(100, cfg.Concurrency),
+	})
 	if err != nil {
 		return nil, err
 	}
