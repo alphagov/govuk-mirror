@@ -26,14 +26,14 @@ local-mirror-data/
 # Go workspace file
 go.work
 
+# Go dependencies
+vendor/
+
 ### macOS ###
 # General
 .DS_Store
 .AppleDouble
 .LSOverride
-
-# Icon must end with two \r
-Icon
 
 # Thumbnails
 ._*
@@ -59,4 +59,3 @@ Temporary Items
 *.icloud
 
 # End of https://www.toptal.com/developers/gitignore/api/go,macos
-
