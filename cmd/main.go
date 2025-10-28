@@ -30,6 +30,7 @@ func main() {
 }
 
 func initLogger() {
+	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	logLevel, ok := os.LookupEnv("LOG_LEVEL")
 	if !ok {
