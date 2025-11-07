@@ -118,7 +118,7 @@ func responseHandler(r *colly.Response) {
 
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		log.Error().Err(err).Str("url", r.Request.URL.String()).Msg("Error parsing Content-Type header")
+		log.Error().Err(err).Str("crawled_url", r.Request.URL.String()).Msg("Error parsing Content-Type header")
 	}
 	if mediaType == "text/css" {
 		urls := file.FindCssUrls(r.Body)
@@ -141,9 +141,9 @@ func responseHandler(r *colly.Response) {
 
 	err = file.Save(r.Request.URL, contentType, r.Body)
 	if err != nil {
-		log.Error().Err(err).Str("url", r.Request.URL.String()).Msg("Error saving response to disk")
+		log.Error().Err(err).Str("crawled_url", r.Request.URL.String()).Msg("Error saving response to disk")
 	} else {
-		log.Info().Str("url", r.Request.URL.String()).Str("type", mediaType).Msg("Downloaded file")
+		log.Info().Str("crawled_url", r.Request.URL.String()).Str("type", mediaType).Msg("Downloaded file")
 	}
 }
 
@@ -153,7 +153,7 @@ func errorHandler(r *colly.Response, err error) {
 		return
 	}
 
-	log.Error().Err(err).Int("status", r.StatusCode).Str("url", r.Request.URL.String()).Msg("Error returned from request")
+	log.Error().Err(err).Int("status", r.StatusCode).Str("crawled_url", r.Request.URL.String()).Msg("Error returned from request")
 }
 
 func isForbiddenURLError(err error) bool {
