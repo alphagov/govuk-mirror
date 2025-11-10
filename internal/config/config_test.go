@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -18,22 +19,24 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "defaults",
 			expected: &Config{
-				UserAgent:      "govuk-mirror-bot",
-				Concurrency:    10,
-				SkipValidation: false,
+				UserAgent:             "govuk-mirror-bot",
+				Concurrency:           10,
+				SkipValidation:        false,
+				MetricRefreshInterval: 10 * time.Second,
 			},
 		},
 		{
 			name: "env vars",
 			envVars: map[string]string{
-				"SITE":                 "example.com",
-				"ALLOWED_DOMAINS":      "example.com,foo.bar",
-				"USER_AGENT":           "custom-agent",
-				"HEADERS":              "Test-Header:Test-Value",
-				"CONCURRENCY":          "20",
-				"URL_RULES":            "rule1,rule2",
-				"DISALLOWED_URL_RULES": "rule3,rule4",
-				"SKIP_VALIDATION":      "true",
+				"SITE":                    "example.com",
+				"ALLOWED_DOMAINS":         "example.com,foo.bar",
+				"USER_AGENT":              "custom-agent",
+				"HEADERS":                 "Test-Header:Test-Value",
+				"CONCURRENCY":             "20",
+				"URL_RULES":               "rule1,rule2",
+				"DISALLOWED_URL_RULES":    "rule3,rule4",
+				"SKIP_VALIDATION":         "true",
+				"METRIC_REFRESH_INTERVAL": "10s",
 			},
 			expected: &Config{
 				Site:           "example.com",
@@ -51,7 +54,8 @@ func TestNewConfig(t *testing.T) {
 					regexp.MustCompile("rule3"),
 					regexp.MustCompile("rule4"),
 				},
-				SkipValidation: true,
+				SkipValidation:        true,
+				MetricRefreshInterval: 10 * time.Second,
 			},
 		},
 	}

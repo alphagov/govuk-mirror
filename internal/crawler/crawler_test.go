@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
+	"mirrorer/internal/metrics"
 	"mirrorer/internal/mime"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,8 @@ import (
 	"testing"
 
 	"github.com/gocolly/colly/v2"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -182,6 +185,7 @@ func newTestServer(t *testing.T) *httptest.Server {
 }
 
 func TestNewCrawler(t *testing.T) {
+	// Setup Config for Crawler
 	cfg := &config.Config{
 		UserAgent:      "custom-agent",
 		AllowedDomains: []string{"example.com"},
@@ -193,7 +197,16 @@ func TestNewCrawler(t *testing.T) {
 		},
 	}
 
-	cr, err := NewCrawler(cfg)
+	// Create a registry
+	reg := prometheus.NewRegistry()
+
+	// Initialize metrics
+	m := metrics.NewMetrics(reg)
+
+	// Create Crawler instance
+	cr, err := NewCrawler(cfg, m)
+
+	// Assertions on Crawler instances
 	assert.Nil(t, err)
 	assert.NotNil(t, cr)
 	assert.Equal(t, cfg, cr.cfg)
@@ -296,7 +309,15 @@ func TestRun(t *testing.T) {
 			regexp.MustCompile("/disallowed"),
 		},
 	}
-	cr, err := NewCrawler(cfg)
+
+	// Create a registry
+	reg := prometheus.NewRegistry()
+
+	// Initialize metrics
+	m := metrics.NewMetrics(reg)
+
+	// Create a Crawler instance
+	cr, err := NewCrawler(cfg, m)
 	assert.NoError(t, err)
 
 	defer func() {
@@ -305,8 +326,15 @@ func TestRun(t *testing.T) {
 		}
 	}()
 
+	// Run the Crawler
 	cr.Run()
 
+	// Assert that the errorCounter metric has been incremented twice for 404 and 503 errors
+	t.Run("correct errorCounter metric", func(t *testing.T) {
+		assert.Equal(t, float64(2), testutil.ToFloat64(m.ErrorCounter()))
+	})
+
+	// Assert that the expected content matches the actual content saved
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			content, err := os.ReadFile(hostname + tt.filePath)
@@ -315,6 +343,7 @@ func TestRun(t *testing.T) {
 		})
 	}
 
+	// Assert that the correct files have been written
 	t.Run("correct files written", func(t *testing.T) {
 		var test_paths []string
 		for _, test := range tests {

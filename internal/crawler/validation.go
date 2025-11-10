@@ -26,7 +26,7 @@ func ValidateCrawlerConfig(cfg *config.Config, timeout time.Duration) error {
 		if isAssetDomain(domain) {
 			continue
 		}
-		
+
 		testURL := "https://" + domain
 		if !isDomainAccessibleWithConfig(testURL, cfg, timeout) {
 			return &DomainNotAccessibleError{Domain: domain}
