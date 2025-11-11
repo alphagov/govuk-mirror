@@ -18,6 +18,7 @@ type Config struct {
 	DisallowedURLFilters  []*regexp.Regexp  `env:"DISALLOWED_URL_RULES" envSeparator:","`
 	SkipValidation        bool              `env:"SKIP_VALIDATION" envDefault:"false"`
 	MetricRefreshInterval time.Duration     `env:"METRIC_REFRESH_INTERVAL" envDefault:"10s"`
+	Async                 bool              `env:"ASYNC" envDefault:"true"`
 }
 
 func NewConfig() (*Config, error) {

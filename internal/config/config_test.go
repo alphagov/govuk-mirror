@@ -23,6 +23,7 @@ func TestNewConfig(t *testing.T) {
 				Concurrency:           10,
 				SkipValidation:        false,
 				MetricRefreshInterval: 10 * time.Second,
+				Async:          		true,
 			},
 		},
 		{
@@ -37,6 +38,7 @@ func TestNewConfig(t *testing.T) {
 				"DISALLOWED_URL_RULES":    "rule3,rule4",
 				"SKIP_VALIDATION":         "true",
 				"METRIC_REFRESH_INTERVAL": "10s",
+				"ASYNC":                   "true",
 			},
 			expected: &Config{
 				Site:           "example.com",
@@ -56,6 +58,7 @@ func TestNewConfig(t *testing.T) {
 				},
 				SkipValidation:        true,
 				MetricRefreshInterval: 10 * time.Second,
+				Async:                 true,
 			},
 		},
 	}
