@@ -53,7 +53,7 @@ func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, err
 		colly.AllowedDomains(cfg.AllowedDomains...),
 		colly.URLFilters(cfg.URLFilters...),
 		colly.DisallowedURLFilters(cfg.DisallowedURLFilters...),
-		colly.Async(true),
+		colly.Async(cfg.Async),
 	)
 
 	client := client.NewClient(c, redirectHandler(m))
