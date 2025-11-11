@@ -22,3 +22,7 @@ Configuration is handled through environment variables as listed below:
 
 This needs manual deployment to staging and production. Once the `Release` GitHub Action has run select the `Run workflow` 
 option from the `Deploy` GitHub action. Then enter the latest tag number and the environment to deploy to.
+
+## Crawling order
+
+The crawler will scrape the most recent sites first according to the `lastmod` in the sitemap for their URL. In some cases where the `lastmod` is missing this value will be set to `2000-01-01` which means that it will be scraped at the end of the job.

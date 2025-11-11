@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"testing"
 
 	"github.com/gocolly/colly/v2"
@@ -19,6 +20,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 )
+
+var sites_visited = []string {}
 
 func listFiles(root string) ([]string, error) {
 	var files []string
@@ -72,6 +75,10 @@ var routes = map[string]struct {
 						  <loc>/sitemap_1.xml</loc>
 						  <lastmod>2023-10-10T02:50:02+00:00</lastmod>
 						</sitemap>
+						<sitemap>
+						  <loc>/sitemap_2.xml</loc>
+						  <lastmod>2025-11-06T00:00:00+00:00</lastmod>
+						</sitemap>
 					  </sitemapindex>`),
 	},
 	"/sitemap_1.xml": {
@@ -81,7 +88,28 @@ var routes = map[string]struct {
 					  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 						<url>
 						  <loc>/</loc>
-						  <lastmod>2022-09-28T12:47:39+00:00</lastmod>
+						  <lastmod>2025-11-06T11:00:00+00:00</lastmod>
+						  <priority>0.5</priority>
+						</url>
+						</urlset>`),
+	},
+	"/sitemap_2.xml": {
+		status:      http.StatusOK,
+		contentType: "application/xml",
+		body: []byte(`<?xml version="1.0" encoding="UTF-8"?>
+					  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+						<url>
+						  <loc>/1</loc>
+						  <lastmod>2025-11-05T11:00:00+00:00</lastmod>
+						  <priority>0.5</priority>
+						</url>
+						<url>
+						  <loc>/2</loc>
+						  <lastmod>2025-11-07T11:00:00+00:00</lastmod>
+						  <priority>0.5</priority>
+						</url>
+						<url>
+						  <loc>/3</loc>
 						  <priority>0.5</priority>
 						</url>
 						</urlset>`),
@@ -152,6 +180,21 @@ var routes = map[string]struct {
 		contentType: "text/html",
 		body:        []byte(`<!DOCTYPE html><html><head><title>503 - Server Error</title></head></html>`),
 	},
+	"/1": {
+		status:      http.StatusOK,
+		contentType: "text/html",
+		body:        []byte(`<!DOCTYPE html><html><head><title>1</title></head></html>`),
+	},
+	"/2": {
+		status:      http.StatusOK,
+		contentType: "text/html",
+		body:        []byte(`<!DOCTYPE html><html><head><title>2</title></head></html>`),
+	},
+	"/3": {
+		status:      http.StatusOK,
+		contentType: "text/html",
+		body:        []byte(`<!DOCTYPE html><html><head><title>3</title></head></html>`),
+	},
 }
 
 func isRedirect(status int) bool {
@@ -175,6 +218,7 @@ func newTestServer(t *testing.T) *httptest.Server {
 				if err != nil {
 					t.Error("Test server unable to write response")
 				}
+				sites_visited = append(sites_visited, r.URL.Path)
 			})
 		}
 	}
@@ -238,6 +282,11 @@ func TestRun(t *testing.T) {
 			expectedOutput: routes["/sitemap_1.xml"].body,
 		},
 		{
+			name:           "Test sitemap 2",
+			filePath:       "/sitemap_2.xml",
+			expectedOutput: routes["/sitemap_2.xml"].body,
+		},
+		{
 			name:           "Test index.html",
 			filePath:       "/index.html",
 			expectedOutput: routes["/"].body,
@@ -286,6 +335,21 @@ func TestRun(t *testing.T) {
 			name:           "Test external redirect",
 			filePath:       "/external/redirect.html",
 			expectedOutput: file.RedirectHTMLBody("https://disallowed.com"),
+		},
+		{
+			name:           "Test 1",
+			filePath:       "/1.html",
+			expectedOutput: routes["/1"].body,
+		},
+		{
+			name:           "Test 2",
+			filePath:       "/2.html",
+			expectedOutput: routes["/2"].body,
+		},
+		{
+			name:           "Test 3",
+			filePath:       "/3.html",
+			expectedOutput: routes["/3"].body,
 		},
 	}
 
@@ -353,5 +417,16 @@ func TestRun(t *testing.T) {
 		files, err := listFiles(hostname)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, files, test_paths)
+	})
+
+	t.Run("most recent site visited first according to lastmod", func(t *testing.T) {
+		// site - lastmod
+		// /2 	- 2025-11-07T11
+		// /	- 2025-11-06T11
+		// /1	- 2025-11-05T11 
+		// /3	- no lastmod, default to 2000-01-01T00
+		assert.True(t, slices.Index(sites_visited, "/2") < slices.Index(sites_visited, "/"))
+		assert.True(t, slices.Index(sites_visited, "/") < slices.Index(sites_visited, "/1"))
+		assert.True(t, slices.Index(sites_visited, "/1") < slices.Index(sites_visited, "/3"))
 	})
 }
