@@ -15,7 +15,7 @@ type Metrics struct {
 	errorCounter prometheus.Counter
 }
 
-func NewMetrics(reg prometheus.Registerer) *Metrics {
+func NewMetrics(reg *prometheus.Registry) *Metrics {
 	m := &Metrics{
 		errorCounter: prometheus.NewCounter(prometheus.CounterOpts{
 			Name: "crawler_errors_total",
