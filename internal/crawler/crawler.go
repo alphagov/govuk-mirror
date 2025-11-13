@@ -18,20 +18,21 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type entry  struct {
-    val string
-    key string
+type entry struct {
+	val string
+	key string
 }
 
 type entries []entry
+
 var es entries
 
-func (s entries) Len() int { return len(s) }
+func (s entries) Len() int           { return len(s) }
 func (s entries) Less(i, j int) bool { return s[i].val < s[j].val }
-func (s entries) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s entries) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-var num_sitemaps int = 0
-var counter_sitemaps int = 0
+var numSitemaps int = 0
+var counterSitemaps int = 0
 
 type Crawler struct {
 	cfg       *config.Config
@@ -137,7 +138,7 @@ func htmlHandler(m *metrics.Metrics) func(e *colly.HTMLElement) {
 
 func sitemapXmlHandler(e *colly.XMLElement) {
 	nodes, _ := xmlquery.QueryAll(e.DOM.(*xmlquery.Node), "//sitemap")
-	num_sitemaps = len(nodes)
+	numSitemaps = len(nodes)
 
 	xmlquery.FindEach(e.DOM.(*xmlquery.Node), "//sitemap", func(i int, child *xmlquery.Node) {
 		err := e.Request.Visit(child.SelectElement("loc").InnerText())
@@ -163,12 +164,12 @@ func urlsetXmlHandler(e *colly.XMLElement) {
 			val: lastmod,
 			key: child.SelectElement("loc").InnerText()})
 	})
-	counter_sitemaps += 1
+	counterSitemaps += 1
 }
 
 func scrapeHandler(r *colly.Response) {
-	if r.Request.URL.String() == "/sitemap.xml" || counter_sitemaps < num_sitemaps {
-		fmt.Printf("Waiting for more sitemaps to be processed: %d / %d\n", counter_sitemaps, num_sitemaps)
+	if r.Request.URL.String() == "/sitemap.xml" || counterSitemaps < numSitemaps {
+		fmt.Printf("Waiting for more sitemaps to be processed: %d / %d\n", counterSitemaps, numSitemaps)
 		return
 	}
 
