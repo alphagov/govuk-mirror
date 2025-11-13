@@ -85,7 +85,7 @@ func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, err
 	// crawl urlset in sitemap
 	c.OnXML("//urlset", urlsetXmlHandler)
 
-	c.OnScraped(scrapeHandler)
+	c.OnScraped(scrapeHandler(m))
 
 	return c, nil
 }
@@ -167,17 +167,20 @@ func urlsetXmlHandler(e *colly.XMLElement) {
 	counterSitemaps += 1
 }
 
-func scrapeHandler(r *colly.Response) {
-	if r.Request.URL.String() == "/sitemap.xml" || counterSitemaps < numSitemaps {
-		fmt.Printf("Waiting for more sitemaps to be processed: %d / %d\n", counterSitemaps, numSitemaps)
-		return
-	}
+func scrapeHandler(m *metrics.Metrics) func(*colly.Response) {
+	return func(r *colly.Response) {
+		if r.Request.URL.String() == "/sitemap.xml" || counterSitemaps < numSitemaps {
+			fmt.Printf("Waiting for more sitemaps to be processed: %d / %d\n", counterSitemaps, numSitemaps)
+			return
+		}
 
-	sort.Sort(sort.Reverse(es))
-	for _, ei := range es {
-		err := r.Request.Visit(ei.key)
-		if err != nil && !isForbiddenURLError(err) {
-			log.Error().Err(err).Str("link", ei.key).Msg("Error attempting to visit link")
+		sort.Sort(sort.Reverse(es))
+		for _, ei := range es {
+			err := r.Request.Visit(ei.key)
+			if err != nil && !isForbiddenURLError(err) {
+				metrics.CrawlerError(m)
+				log.Error().Err(err).Str("link", ei.key).Msg("Error attempting to visit link")
+			}
 		}
 	}
 }
