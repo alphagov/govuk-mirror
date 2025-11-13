@@ -425,8 +425,9 @@ func TestRun(t *testing.T) {
 		// /	- 2025-11-06T11
 		// /1	- 2025-11-05T11
 		// /3	- no lastmod, default to 2000-01-01T00
-		assert.True(t, slices.Index(sites_visited, "/2") < slices.Index(sites_visited, "/"))
-		assert.True(t, slices.Index(sites_visited, "/") < slices.Index(sites_visited, "/1"))
-		assert.True(t, slices.Index(sites_visited, "/1") < slices.Index(sites_visited, "/3"))
+
+		assert.Less(t, slices.Index(sites_visited, "/2"), slices.Index(sites_visited, "/"))
+		assert.Less(t, slices.Index(sites_visited, "/"), slices.Index(sites_visited, "/1"))
+		assert.Less(t, slices.Index(sites_visited, "/1"), slices.Index(sites_visited, "/3"))
 	})
 }
