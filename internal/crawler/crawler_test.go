@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/stretchr/testify/assert"
@@ -325,4 +326,19 @@ func TestRun(t *testing.T) {
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, files, test_paths)
 	})
+}
+
+func TestRequestDelay_CalculatesTheCorrectDelayWithParallelismOne(t *testing.T) {
+	delay := RequestDelay(10, 1)
+	assert.Equal(t, 96*time.Millisecond, delay)
+}
+
+func TestRequestDelay_CalculatesTheCorrectDelayWithParallelismTwo(t *testing.T) {
+	delay := RequestDelay(10, 2)
+	assert.Equal(t, 192*time.Millisecond, delay)
+}
+
+func TestRequestDelay_CalculatesTheCorrectDelayWithParallelismThree(t *testing.T) {
+	delay := RequestDelay(10, 3)
+	assert.Equal(t, 288*time.Millisecond, delay)
 }
