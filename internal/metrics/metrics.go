@@ -36,7 +36,7 @@ func (m Metrics) ErrorCounter() prometheus.Counter {
 	return m.errorCounter
 }
 
-func PushMetrics(wg *sync.WaitGroup, ctx context.Context, t time.Duration) {
+func PushMetrics(reg *prometheus.Registry, wg *sync.WaitGroup, ctx context.Context, t time.Duration) {
 	// Executes after ticker.Stop() as multiple defer use a stack
 	defer wg.Done()
 
@@ -47,7 +47,7 @@ func PushMetrics(wg *sync.WaitGroup, ctx context.Context, t time.Duration) {
 	for {
 		select {
 		case <-ticker.C:
-			err := push.New(os.Getenv("PROMETHEUS_PUSHGATEWAY_URL"), "mirror_metrics").Push()
+			err := push.New(os.Getenv("PROMETHEUS_PUSHGATEWAY_URL"), "mirror_metrics").Gatherer(reg).Push()
 
 			if err != nil {
 				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
