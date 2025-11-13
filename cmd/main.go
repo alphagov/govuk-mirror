@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"mirrorer/internal/config"
 	"mirrorer/internal/crawler"
+	"mirrorer/internal/metrics"
 	"mirrorer/internal/mime"
 	"os"
+	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -14,6 +19,19 @@ import (
 func main() {
 	initLogger()
 	initMime()
+
+	// Create waitGroup
+	var wg sync.WaitGroup
+
+	// Create context
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Create a non-global registry
+	reg := prometheus.NewRegistry()
+
+	// Initialize metrics
+	prometheusMetrics := metrics.NewMetrics(reg)
+
 	cfg := initConfig()
 
 	// Validate that the SITE URL and allowed domains are accessible before crawling
@@ -23,10 +41,24 @@ func main() {
 		checkError(err, "Configuration validation failed")
 	}
 
-	cr, err := crawler.NewCrawler(cfg)
+	cr, err := crawler.NewCrawler(cfg, prometheusMetrics)
 	checkError(err, "Error creating new crawler")
 
+	// Go routine to send metrics to Prometheus Pushgateway
+	wg.Go(func() {
+		metrics.PushMetrics(&wg, ctx, cfg.MetricRefreshInterval)
+	})
+
+	// Run crawler
 	cr.Run()
+
+	// Signal PushMetrics goroutine to gracefully shutdown
+	cancel()
+
+	// Wait for PushMetrics goroutine to gracefully shutdown
+	log.Info().Msg("Waiting for PushMetrics goroutine to gracefully shutdown")
+	wg.Wait()
+	log.Info().Msg("PushMetrics goroutine has shutdown. Main thread is shutting down")
 }
 
 func initLogger() {

@@ -77,4 +77,3 @@ func TestDomainNotAccessibleError(t *testing.T) {
 	expectedMsg := "domain not accessible: definitely-does-not-exist.example.com"
 	assert.Equal(t, expectedMsg, err.Error())
 }
-

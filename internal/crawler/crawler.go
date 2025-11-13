@@ -6,10 +6,12 @@ import (
 	"mirrorer/internal/client"
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
+	"mirrorer/internal/metrics"
 	"net/http"
 	"strings"
 
 	"github.com/gocolly/colly/v2"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -18,8 +20,8 @@ type Crawler struct {
 	collector *colly.Collector
 }
 
-func NewCrawler(cfg *config.Config) (*Crawler, error) {
-	collector, err := newCollector(cfg)
+func NewCrawler(cfg *config.Config, m *metrics.Metrics) (*Crawler, error) {
+	collector, err := newCollector(cfg, m)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +29,7 @@ func NewCrawler(cfg *config.Config) (*Crawler, error) {
 	return &Crawler{cfg: cfg, collector: collector}, nil
 }
 
-func newCollector(cfg *config.Config) (*colly.Collector, error) {
+func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, error) {
 	c := colly.NewCollector(
 		colly.UserAgent(cfg.UserAgent),
 		colly.AllowedDomains(cfg.AllowedDomains...),
@@ -36,7 +38,7 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 		colly.Async(true),
 	)
 
-	client := client.NewClient(c, redirectHandler)
+	client := client.NewClient(c, redirectHandler(m))
 	c.SetClient(client)
 
 	err := c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: cfg.Concurrency})
@@ -51,17 +53,17 @@ func newCollector(cfg *config.Config) (*colly.Collector, error) {
 	})
 
 	// Handle errors
-	c.OnError(errorHandler)
+	c.OnError(errorHandler(m))
 
 	// Save successful responses to disk
-	c.OnResponse(responseHandler)
+	c.OnResponse(responseHandler(m))
 
 	// Set up a crawling logic
-	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler)
+	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler(m))
 
 	// Crawl sitemap indexes and sitemaps
-	c.OnXML("//sitemapindex/sitemap/loc", xmlHandler)
-	c.OnXML("//urlset/url/loc", xmlHandler)
+	c.OnXML("//sitemapindex/sitemap/loc", xmlHandler(m))
+	c.OnXML("//urlset/url/loc", xmlHandler(m))
 
 	return c, nil
 }
@@ -76,90 +78,108 @@ func (cr *Crawler) Run() {
 	cr.collector.Wait()
 }
 
-func redirectHandler(req *http.Request, via []*http.Request) error {
-	for _, redirectReq := range via {
-		body := file.RedirectHTMLBody(req.URL.String())
-		err := file.Save(redirectReq.URL, "text/html", body)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func htmlHandler(e *colly.HTMLElement) {
-	var link string
-	switch e.Name {
-	case "a", "link":
-		link = e.Attr("href")
-	case "img", "script":
-		link = e.Attr("src")
-	}
-
-	if strings.HasPrefix(link, "#") {
-		return
-	}
-
-	err := e.Request.Visit(link)
-	if err != nil && !isForbiddenURLError(err) {
-		log.Error().Err(err).Str("link", link).Msg("Error attempting to visit link")
-	}
-}
-
-func xmlHandler(e *colly.XMLElement) {
-	err := e.Request.Visit(e.Text)
-	if err != nil && !isForbiddenURLError(err) {
-		log.Error().Err(err).Str("link", e.Text).Msg("Error attempting to visit link")
-	}
-}
-
-func responseHandler(r *colly.Response) {
-	contentType := r.Headers.Get("Content-Type")
-
-	mediaType, _, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		log.Error().Err(err).Str("crawled_url", r.Request.URL.String()).Msg("Error parsing Content-Type header")
-	}
-	if mediaType == "text/css" {
-		urls := file.FindCssUrls(r.Body)
-
-		for _, url := range urls {
-			err := r.Request.Visit(url)
-			if err != nil && !isForbiddenURLError(err) {
-				log.Error().Err(err).Str("link", url).Msg("Error attempting to visit link")
+func redirectHandler(m *metrics.Metrics) func(req *http.Request, via []*http.Request) error {
+	return func(req *http.Request, via []*http.Request) error {
+		for _, redirectReq := range via {
+			body := file.RedirectHTMLBody(req.URL.String())
+			err := file.Save(redirectReq.URL, "text/html", body)
+			if err != nil {
+				metrics.CrawlerError(m)
+				return err
 			}
 		}
-	} else if strings.Contains(mediaType, "openxmlformats") || strings.Contains(mediaType, "+xml") {
-		/*
-			Some responses are in the Office OpenXML format (e.g. docx, xlsx, pptx) which aren't
-			strictly XML structured and have in their Content-Type header "xml" as a substring. Parsing
-			such responses as XML causes errors.
-
-			This hacky workaround involves stripping "xml" from the Content-Type header to prevent Colly
-			from trying to parse these files as XML. This also stops unnecessary parsing of non-sitemap files
-			(e.g. svg or rdf).
-		*/
-
-		r.Headers.Set("Content-Type", strings.ReplaceAll(contentType, "xml", ""))
-	}
-
-	err = file.Save(r.Request.URL, contentType, r.Body)
-	if err != nil {
-		log.Error().Err(err).Str("crawled_url", r.Request.URL.String()).Msg("Error saving response to disk")
-	} else {
-		log.Info().Str("crawled_url", r.Request.URL.String()).Str("type", mediaType).Msg("Downloaded file")
+		return nil
 	}
 }
 
-func errorHandler(r *colly.Response, err error) {
-	if errors.Is(err, client.DisallowedURLError{}) {
-		// Normal behaviour to not follow the URL, so we can just ignore this error
-		return
-	}
+func htmlHandler(m *metrics.Metrics) func(e *colly.HTMLElement) {
+	return func(e *colly.HTMLElement) {
+		var link string
+		switch e.Name {
+		case "a", "link":
+			link = e.Attr("href")
+		case "img", "script":
+			link = e.Attr("src")
+		}
 
-	log.Error().Err(err).Int("status", r.StatusCode).Str("crawled_url", r.Request.URL.String()).Msg("Error returned from request")
+		if strings.HasPrefix(link, "#") {
+			return
+		}
+
+		err := e.Request.Visit(link)
+		if err != nil && !isForbiddenURLError(err) {
+			metrics.CrawlerError(m)
+			log.Error().Err(err).Str("link", link).Msg("Error attempting to visit link")
+		}
+	}
+}
+
+func xmlHandler(m *metrics.Metrics) func(e *colly.XMLElement) {
+	return func(e *colly.XMLElement) {
+		err := e.Request.Visit(e.Text)
+		if err != nil && !isForbiddenURLError(err) {
+			metrics.CrawlerError(m)
+			log.Error().Err(err).Str("link", e.Text).Msg("Error attempting to visit link")
+		}
+	}
+}
+
+func responseHandler(m *metrics.Metrics) func(*colly.Response) {
+	return func(r *colly.Response) {
+		contentType := r.Headers.Get("Content-Type")
+
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			metrics.CrawlerError(m)
+			log.Error().Err(err).Str("crawled_url", r.Request.URL.String()).Msg("Error parsing Content-Type header")
+		}
+		if mediaType == "text/css" {
+			urls := file.FindCssUrls(r.Body)
+
+			for _, url := range urls {
+				err := r.Request.Visit(url)
+				if err != nil && !isForbiddenURLError(err) {
+					metrics.CrawlerError(m)
+					log.Error().Err(err).Str("link", url).Msg("Error attempting to visit link")
+				}
+			}
+		} else if strings.Contains(mediaType, "openxmlformats") || strings.Contains(mediaType, "+xml") {
+			/*
+				Some responses are in the Office OpenXML format (e.g. docx, xlsx, pptx) which aren't
+				strictly XML structured and have in their Content-Type header "xml" as a substring. Parsing
+				such responses as XML causes errors.
+
+				This hacky workaround involves stripping "xml" from the Content-Type header to prevent Colly
+				from trying to parse these files as XML. This also stops unnecessary parsing of non-sitemap files
+				(e.g. svg or rdf).
+			*/
+
+			r.Headers.Set("Content-Type", strings.ReplaceAll(contentType, "xml", ""))
+		}
+
+		err = file.Save(r.Request.URL, contentType, r.Body)
+		if err != nil {
+			metrics.CrawlerError(m)
+			log.Error().Err(err).Str("crawled_url", r.Request.URL.String()).Msg("Error saving response to disk")
+		} else {
+			log.Info().Str("crawled_url", r.Request.URL.String()).Str("type", mediaType).Msg("Downloaded file")
+		}
+	}
 }
 
 func isForbiddenURLError(err error) bool {
 	return errors.Is(err, colly.ErrForbiddenDomain) || errors.Is(err, colly.ErrForbiddenURL) || errors.As(err, new(*colly.AlreadyVisitedError))
+}
+
+func errorHandler(m *metrics.Metrics) func(*colly.Response, error) {
+	return func(r *colly.Response, err error) {
+		if errors.Is(err, client.DisallowedURLError{}) {
+			// Normal behaviour to not follow the URL, so we can just ignore this error
+			return
+		}
+
+		metrics.CrawlerError(m)
+
+		log.Error().Err(err).Int("status", r.StatusCode).Str("crawled_url", r.Request.URL.String()).Msg("Error returned from request")
+	}
 }
