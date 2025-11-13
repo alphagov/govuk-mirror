@@ -46,7 +46,7 @@ func main() {
 
 	// Go routine to send metrics to Prometheus Pushgateway
 	wg.Go(func() {
-		metrics.PushMetrics(&wg, ctx, cfg.MetricRefreshInterval)
+		metrics.PushMetrics(reg, &wg, ctx, cfg.MetricRefreshInterval)
 	})
 
 	// Run crawler
