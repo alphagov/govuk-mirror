@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var sites_visited = []string {}
+var sites_visited = []string{}
 
 func listFiles(root string) ([]string, error) {
 	var files []string
@@ -423,7 +423,7 @@ func TestRun(t *testing.T) {
 		// site - lastmod
 		// /2 	- 2025-11-07T11
 		// /	- 2025-11-06T11
-		// /1	- 2025-11-05T11 
+		// /1	- 2025-11-05T11
 		// /3	- no lastmod, default to 2000-01-01T00
 		assert.True(t, slices.Index(sites_visited, "/2") < slices.Index(sites_visited, "/"))
 		assert.True(t, slices.Index(sites_visited, "/") < slices.Index(sites_visited, "/1"))
