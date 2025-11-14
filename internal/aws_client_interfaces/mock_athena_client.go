@@ -104,7 +104,7 @@ func (mock *MockAthenaClient) GetQueryExecution(ctx context.Context, params *ath
 }
 
 func compareExpectedGetQueryExecutionInputToActual(expected *athena.GetQueryExecutionInput, actual *athena.GetQueryExecutionInput) error {
-	if expected.QueryExecutionId == actual.QueryExecutionId {
+	if *expected.QueryExecutionId == *actual.QueryExecutionId {
 		return nil
 	}
 

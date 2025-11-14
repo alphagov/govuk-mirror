@@ -69,7 +69,7 @@ func (mock *MockS3Client) GetObject(_ context.Context, params *s3.GetObjectInput
 }
 
 func compareExpectedGetObjectInputToActual(expected *s3.GetObjectInput, actual *s3.GetObjectInput) error {
-	if expected.Bucket == actual.Bucket && expected.Key == actual.Key {
+	if *expected.Bucket == *actual.Bucket && *expected.Key == *actual.Key {
 		return nil
 	}
 
