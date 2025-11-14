@@ -91,12 +91,12 @@ func (mock *MockAthenaClient) GetQueryExecution(ctx context.Context, params *ath
 	response := mock.mockGetQueryExecutionResponses[0]
 	mock.mockGetQueryExecutionResponses = mock.mockGetQueryExecutionResponses[1:]
 
-	err := compareExpectedGetQueryExecutionInputToActual(response.expectedInput, params)
-	if err != nil {
-		return nil, err
+	if response.err != nil {
+		return nil, response.err
 	}
 
-	if response.err != nil {
+	err := compareExpectedGetQueryExecutionInputToActual(response.expectedInput, params)
+	if err != nil {
 		return nil, err
 	}
 
@@ -130,12 +130,12 @@ func (mock *MockAthenaClient) StartQueryExecution(ctx context.Context, params *a
 	response := mock.mockStartQueryExecutionResponses[0]
 	mock.mockStartQueryExecutionResponses = mock.mockStartQueryExecutionResponses[1:]
 
-	err := compareExpectedStartQueryExecutionInputToActual(response.expectedInput, params)
-	if err != nil {
-		return nil, err
+	if response.err != nil {
+		return nil, response.err
 	}
 
-	if response.err != nil {
+	err := compareExpectedStartQueryExecutionInputToActual(response.expectedInput, params)
+	if err != nil {
 		return nil, err
 	}
 

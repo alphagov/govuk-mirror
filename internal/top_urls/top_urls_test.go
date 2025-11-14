@@ -36,7 +36,6 @@ var counts = [10]int64{
 }
 
 var urlHitCounts = make([]UrlHitCount, len(urls))
-var random = rand.New(rand.NewSource(99))
 
 func TestMain(m *testing.M) {
 	for i, u := range urls {
@@ -46,7 +45,7 @@ func TestMain(m *testing.M) {
 		}
 
 		urlHitCounts[i] = UrlHitCount{
-			viewedUrl: parsedUrl,
+			viewedUrl: *parsedUrl,
 			viewCount: counts[i],
 		}
 	}
@@ -55,13 +54,13 @@ func TestMain(m *testing.M) {
 }
 
 func TestNewTopUrlsWithTooManyUnsampledRequested(t *testing.T) {
-	topUrls, err := NewTopUrls(urlHitCounts, 20, 5, random)
+	topUrls, err := NewTopUrls(urlHitCounts, 20, 5, rand.New(rand.NewSource(99)))
 	assert.Nil(t, topUrls)
 	assert.Error(t, err)
 }
 
 func TestNewTopUrlsWithTooManySampledRequested(t *testing.T) {
-	topUrls, err := NewTopUrls(urlHitCounts, 5, 6, random)
+	topUrls, err := NewTopUrls(urlHitCounts, 5, 6, rand.New(rand.NewSource(99)))
 	assert.Nil(t, topUrls)
 	assert.Error(t, err)
 }
@@ -77,7 +76,7 @@ func TestNewTopUrlsWithTop3And2Sampled(t *testing.T) {
 		urlHitCounts[4],
 	}
 
-	topUrls, err := NewTopUrls(urlHitCounts, 3, 2, random)
+	topUrls, err := NewTopUrls(urlHitCounts, 3, 2, rand.New(rand.NewSource(99)))
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUnsampledUrls, topUrls.topUnsampledUrls)
@@ -95,12 +94,12 @@ func TestNewTopUrlsWithTop7And3Sampled(t *testing.T) {
 		urlHitCounts[5],
 	}
 	expectedSampledUrls := []UrlHitCount{
-		urlHitCounts[6],
 		urlHitCounts[2],
+		urlHitCounts[6],
 		urlHitCounts[4],
 	}
 
-	topUrls, err := NewTopUrls(urlHitCounts, 7, 3, random)
+	topUrls, err := NewTopUrls(urlHitCounts, 7, 3, rand.New(rand.NewSource(99)))
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUnsampledUrls, topUrls.topUnsampledUrls)
