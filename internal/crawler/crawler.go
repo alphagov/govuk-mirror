@@ -23,10 +23,10 @@ type entry struct {
 }
 
 type CrawlState struct {
-	entries []entry
-	numSitemaps int
+	entries         []entry
+	numSitemaps     int
 	counterSitemaps int
-	isScraping bool	
+	isScraping      bool
 }
 
 type Crawler struct {
@@ -53,10 +53,10 @@ func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, err
 	)
 
 	crawlState := &CrawlState{
-		entries: []entry{},
-		numSitemaps: 0,
+		entries:         []entry{},
+		numSitemaps:     0,
 		counterSitemaps: 0,
-		isScraping: false,
+		isScraping:      false,
 	}
 
 	client := client.NewClient(c, redirectHandler(m))
@@ -130,11 +130,7 @@ func htmlHandler(m *metrics.Metrics) func(e *colly.HTMLElement) {
 			return
 		}
 
-		err := e.Request.Visit(link)
-		if err != nil && !isForbiddenURLError(err) {
-			metrics.CrawlerError(m)
-			log.Error().Err(err).Str("link", link).Msg("Error attempting to visit link")
-		}
+		_ = e.Request.Visit(link)
 	}
 }
 
@@ -144,12 +140,7 @@ func sitemapXmlHandler(crawlState *CrawlState) func(e *colly.XMLElement) {
 		crawlState.numSitemaps = len(nodes)
 
 		xmlquery.FindEach(e.DOM.(*xmlquery.Node), "//sitemap", func(i int, child *xmlquery.Node) {
-			err := e.Request.Visit(child.SelectElement("loc").InnerText())
-			if err != nil && !isForbiddenURLError(err) {
-				log.Error().Err(err).Str(
-					"link",
-					child.SelectElement("loc").InnerText()).Msg("Error attempting to visit link")
-			}
+			_ = e.Request.Visit(child.SelectElement("loc").InnerText())
 		})
 	}
 }
@@ -184,11 +175,7 @@ func scrapeHandler(m *metrics.Metrics, crawlState *CrawlState) func(*colly.Respo
 		})
 		slices.Reverse(crawlState.entries)
 		for _, ei := range crawlState.entries {
-			err := r.Request.Visit(ei.key)
-			if err != nil && !isForbiddenURLError(err) {
-				metrics.CrawlerError(m)
-				log.Error().Err(err).Str("link", ei.key).Msg("Error attempting to visit link")
-			}
+			_ = r.Request.Visit(ei.key)
 		}
 	}
 }
@@ -206,11 +193,7 @@ func responseHandler(m *metrics.Metrics) func(*colly.Response) {
 			urls := file.FindCssUrls(r.Body)
 
 			for _, url := range urls {
-				err := r.Request.Visit(url)
-				if err != nil && !isForbiddenURLError(err) {
-					metrics.CrawlerError(m)
-					log.Error().Err(err).Str("link", url).Msg("Error attempting to visit link")
-				}
+				_ = r.Request.Visit(url)
 			}
 		} else if strings.Contains(mediaType, "openxmlformats") || strings.Contains(mediaType, "+xml") {
 			/*
@@ -242,7 +225,7 @@ func isForbiddenURLError(err error) bool {
 
 func errorHandler(m *metrics.Metrics) func(*colly.Response, error) {
 	return func(r *colly.Response, err error) {
-		if errors.Is(err, client.DisallowedURLError{}) {
+		if errors.Is(err, client.DisallowedURLError{}) || isForbiddenURLError(err) {
 			// Normal behaviour to not follow the URL, so we can just ignore this error
 			return
 		}
