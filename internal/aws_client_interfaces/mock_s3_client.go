@@ -56,12 +56,12 @@ func (mock *MockS3Client) GetObject(_ context.Context, params *s3.GetObjectInput
 	response := mock.mockGetObjectResponses[0]
 	mock.mockGetObjectResponses = mock.mockGetObjectResponses[1:]
 
-	err := compareExpectedGetObjectInputToActual(response.expectedInput, params)
-	if err != nil {
-		return nil, err
+	if response.err != nil {
+		return nil, response.err
 	}
 
-	if response.err != nil {
+	err := compareExpectedGetObjectInputToActual(response.expectedInput, params)
+	if err != nil {
 		return nil, err
 	}
 

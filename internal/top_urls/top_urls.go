@@ -14,7 +14,7 @@ type TopUrls struct {
 }
 
 type UrlHitCount struct {
-	viewedUrl *url.URL
+	viewedUrl url.URL
 	viewCount int64
 }
 
