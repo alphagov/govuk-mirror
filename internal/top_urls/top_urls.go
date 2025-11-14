@@ -9,13 +9,13 @@ import (
 )
 
 type TopUrls struct {
-	topUnsampledUrls     []UrlHitCount
-	remainingSampledUrls []UrlHitCount
+	TopUnsampledUrls     []UrlHitCount
+	RemainingSampledUrls []UrlHitCount
 }
 
 type UrlHitCount struct {
-	viewedUrl url.URL
-	viewCount int64
+	ViewedUrl url.URL
+	ViewCount int64
 }
 
 func NewTopUrls(urls []UrlHitCount, numberUnsampled int, numberToSample int, random *rand.Rand) (*TopUrls, error) {
@@ -42,7 +42,7 @@ func NewTopUrls(urls []UrlHitCount, numberUnsampled int, numberToSample int, ran
 	}
 
 	slices.SortFunc(copiedUrls, func(a, b UrlHitCount) int {
-		return cmp.Compare(b.viewCount, a.viewCount)
+		return cmp.Compare(b.ViewCount, a.ViewCount)
 	})
 
 	sampledUrls, err := sampleRemainingUrls(copiedUrls[numberUnsampled:totalUrls], numberToSample, random)
@@ -51,8 +51,8 @@ func NewTopUrls(urls []UrlHitCount, numberUnsampled int, numberToSample int, ran
 	}
 
 	return &TopUrls{
-		topUnsampledUrls:     copiedUrls[0:numberUnsampled],
-		remainingSampledUrls: sampledUrls,
+		TopUnsampledUrls:     copiedUrls[0:numberUnsampled],
+		RemainingSampledUrls: sampledUrls,
 	}, nil
 }
 
