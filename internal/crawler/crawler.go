@@ -130,7 +130,7 @@ func htmlHandler(m *metrics.Metrics) func(e *colly.HTMLElement) {
 			return
 		}
 
-		e.Request.Visit(link)
+		_ = e.Request.Visit(link)
 	}
 }
 
@@ -140,7 +140,7 @@ func sitemapXmlHandler(crawlState *CrawlState) func(e *colly.XMLElement) {
 		crawlState.numSitemaps = len(nodes)
 
 		xmlquery.FindEach(e.DOM.(*xmlquery.Node), "//sitemap", func(i int, child *xmlquery.Node) {
-			e.Request.Visit(child.SelectElement("loc").InnerText())
+			_ = e.Request.Visit(child.SelectElement("loc").InnerText())
 		})
 	}
 }
