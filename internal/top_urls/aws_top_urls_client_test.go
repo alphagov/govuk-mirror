@@ -53,8 +53,8 @@ func TestAwsGetTopUrls(t *testing.T) {
 	queryExecutionId := "123-456"
 
 	s3Bucket := "govuk-example-test-bucket"
-	s3Key := "/path/to/file.csv"
-	s3Path := fmt.Sprintf("s3://%s%s", s3Bucket, s3Key)
+	s3Key := "path/to/file.csv"
+	s3Path := fmt.Sprintf("s3://%s/%s", s3Bucket, s3Key)
 
 	athenaStartQueryExecutionInput := &athena.StartQueryExecutionInput{
 		QueryString:         &queryString,

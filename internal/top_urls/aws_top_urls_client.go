@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"mirrorer/internal/aws_client_interfaces"
@@ -188,7 +189,7 @@ func s3PathStringToS3Path(s3PathString *string) (*resultsS3Path, error) {
 
 	return &resultsS3Path{
 		Bucket: parsedUrl.Host,
-		Key:    parsedUrl.Path,
+		Key:    strings.TrimPrefix(parsedUrl.Path, "/"),
 	}, nil
 }
 
