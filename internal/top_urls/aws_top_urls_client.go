@@ -171,13 +171,12 @@ func (topUrlsClient *AwsTopUrlsClient) waitForAthenaQuery(ctx context.Context, q
 		}
 	}
 
-	log.Info().Msgf("Athena Query did not succeed, terminal state is %s", queryExecutionState)
+	log.Info().Msgf("Athena Query succeeded, output saved to %s", *queryExecutionResponse.QueryExecution.ResultConfiguration.OutputLocation)
 	s3Path, err := s3PathStringToS3Path(queryExecutionResponse.QueryExecution.ResultConfiguration.OutputLocation)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Info().Msgf("Athena Query succeeded, output saved to %s", *queryExecutionResponse.QueryExecution.ResultConfiguration.OutputLocation)
 	return s3Path, nil
 }
 
