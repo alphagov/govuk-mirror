@@ -125,6 +125,7 @@ func (topUrlsClient *AwsTopUrlsClient) startAthenaQuery(ctx context.Context) (at
 		LIMIT 1000
 	`
 
+	log.Info().Msg("Starting Athena Query")
 	startQueryExecutionResponse, err := topUrlsClient.athenaClient.StartQueryExecution(ctx, &athena.StartQueryExecutionInput{
 		QueryString: &athenaQuery,
 		ExecutionParameters: []string{
@@ -146,6 +147,7 @@ func (topUrlsClient *AwsTopUrlsClient) waitForAthenaQuery(ctx context.Context, q
 	var queryExecutionResponse *athena.GetQueryExecutionOutput
 	var err error
 
+	log.Info().Msg("Waiting for Athena Query to complete")
 	for queryExecutionState == athenaTypes.QueryExecutionStateQueued || queryExecutionState == athenaTypes.QueryExecutionStateRunning {
 		queryExecutionResponse, err = topUrlsClient.athenaClient.GetQueryExecution(ctx, &athena.GetQueryExecutionInput{
 			QueryExecutionId: queryExecutionId,
@@ -156,21 +158,25 @@ func (topUrlsClient *AwsTopUrlsClient) waitForAthenaQuery(ctx context.Context, q
 		}
 
 		queryExecutionState = queryExecutionResponse.QueryExecution.Status.State
+		log.Info().Msgf("Athena Query current state is %s", queryExecutionState)
 		time.Sleep(500 * time.Millisecond)
 	}
 
 	if queryExecutionState != athenaTypes.QueryExecutionStateSucceeded {
+		log.Error().Msgf("Athena Query did not succeed, terminal state is %s", queryExecutionState)
 		return nil, &AthenaQueryFailedError{
 			QueryState:       queryExecutionState,
 			QueryExecutionId: *queryExecutionId,
 		}
 	}
 
+	log.Info().Msgf("Athena Query did not succeed, terminal state is %s", queryExecutionState)
 	s3Path, err := s3PathStringToS3Path(queryExecutionResponse.QueryExecution.ResultConfiguration.OutputLocation)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Info().Msgf("Athena Query succeeded, output saved to %s", *queryExecutionResponse.QueryExecution.ResultConfiguration.OutputLocation)
 	return s3Path, nil
 }
 
@@ -187,6 +193,7 @@ func s3PathStringToS3Path(s3PathString *string) (*resultsS3Path, error) {
 }
 
 func (topUrlsClient *AwsTopUrlsClient) getAthenaQueryResultsFromS3(ctx context.Context, s3Path *resultsS3Path) ([][]string, error) {
+	log.Info().Msgf("Getting Athena Query output from S3")
 	s3Object, err := topUrlsClient.s3Client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: &s3Path.Bucket,
 		Key:    &s3Path.Key,
@@ -213,5 +220,6 @@ func (topUrlsClient *AwsTopUrlsClient) getAthenaQueryResultsFromS3(ctx context.C
 		return nil, err
 	}
 
+	log.Info().Msgf("CSV successfully read from S3")
 	return csvRows, nil
 }
