@@ -101,22 +101,24 @@ func TestAwsGetTopUrls(t *testing.T) {
 		assert.True(t, athenaClient.AllMocksCalled())
 	})
 
-	t.Run("GetTopUrls returns an AthenaQueryFailed error if the athena query does not end in success", func(t *testing.T) {
-		random := rand.New(rand.NewSource(99))
+	for _, terminalState := range []athenaTypes.QueryExecutionState{athenaTypes.QueryExecutionStateCancelled, athenaTypes.QueryExecutionStateFailed} {
+		t.Run(fmt.Sprintf("GetTopUrls returns an AthenaQueryFailed error if the athena query does not end in success with state %s", terminalState), func(t *testing.T) {
+			random := rand.New(rand.NewSource(99))
 
-		athenaClient := aws_client_interfaces.NewMockAthenaClient()
-		athenaClient.AddMockStartQueryExecutionResponse(athenaStartQueryExecutionInput, queryExecutionId)
-		athenaClient.AddMockGetQueryExecutionResponse(athenaGetQueryExecutionInput, queryExecutionId, athenaTypes.QueryExecutionStateCancelled, s3Path)
-		s3Client := aws_client_interfaces.NewMockS3Client()
+			athenaClient := aws_client_interfaces.NewMockAthenaClient()
+			athenaClient.AddMockStartQueryExecutionResponse(athenaStartQueryExecutionInput, queryExecutionId)
+			athenaClient.AddMockGetQueryExecutionResponse(athenaGetQueryExecutionInput, queryExecutionId, terminalState, s3Path)
+			s3Client := aws_client_interfaces.NewMockS3Client()
 
-		topUrlsClient := top_urls.NewAwsTopUrlsClient(cfg, &athenaClient, &s3Client)
+			topUrlsClient := top_urls.NewAwsTopUrlsClient(cfg, &athenaClient, &s3Client)
 
-		topUrls, err := topUrlsClient.GetTopUrls(random)
-		assert.Nil(t, topUrls)
-		assert.IsType(t, &top_urls.AthenaQueryFailedError{}, err)
-		assert.True(t, athenaClient.AllMocksCalled())
-		assert.True(t, s3Client.AllMocksCalled())
-	})
+			topUrls, err := topUrlsClient.GetTopUrls(random)
+			assert.Nil(t, topUrls)
+			assert.IsType(t, &top_urls.AthenaQueryFailedError{}, err)
+			assert.True(t, athenaClient.AllMocksCalled())
+			assert.True(t, s3Client.AllMocksCalled())
+		})
+	}
 
 	t.Run("GetTopUrls returns an error if s3.GetObject returns an error", func(t *testing.T) {
 		random := rand.New(rand.NewSource(99))
@@ -171,18 +173,19 @@ func TestAwsGetTopUrls(t *testing.T) {
 			},
 			queryExecutionId,
 		)
-		athenaClient.AddMockGetQueryExecutionResponse(
-			&athena.GetQueryExecutionInput{QueryExecutionId: &queryExecutionId},
-			queryExecutionId,
+
+		for _, state := range []athenaTypes.QueryExecutionState{
+			athenaTypes.QueryExecutionStateQueued,
 			athenaTypes.QueryExecutionStateRunning,
-			s3Path,
-		)
-		athenaClient.AddMockGetQueryExecutionResponse(
-			&athena.GetQueryExecutionInput{QueryExecutionId: &queryExecutionId},
-			queryExecutionId,
 			athenaTypes.QueryExecutionStateSucceeded,
-			s3Path,
-		)
+		} {
+			athenaClient.AddMockGetQueryExecutionResponse(
+				&athena.GetQueryExecutionInput{QueryExecutionId: &queryExecutionId},
+				queryExecutionId,
+				state,
+				s3Path,
+			)
+		}
 		s3Client := aws_client_interfaces.NewMockS3Client()
 		s3Client.AddMockGetObjectResponse(
 			&s3.GetObjectInput{
