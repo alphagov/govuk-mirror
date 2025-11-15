@@ -17,11 +17,12 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . ./
-RUN go build -o /bin/govuk-mirror -ldflags="$go_ldflags" cmd/main.go
-
+RUN go build -o /bin/govuk-mirror -ldflags="$go_ldflags" cmd/main.go && \
+  go build -o /bin/govuk-mirror-comparison -ldflags="$go_ldflags" cmd/mirror_comparison/main.go
 
 FROM --platform=$TARGETPLATFORM scratch
 COPY --from=builder /bin/govuk-mirror /bin/govuk-mirror
+COPY --from=builder /bin/govuk-mirror-comparison /bin/govuk-mirror-comparison
 COPY --from=builder /usr/share/ca-certificates /usr/share/ca-certificates
 COPY --from=builder /etc/ssl /etc/ssl
 USER 1001

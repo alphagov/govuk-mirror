@@ -4,20 +4,20 @@ import (
 	"context"
 	"mirrorer/internal/config"
 	"mirrorer/internal/crawler"
+	"mirrorer/internal/logger"
 	"mirrorer/internal/metrics"
 	"mirrorer/internal/mime"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	initLogger()
+	err := logger.InitialiseLogger()
+	checkError(err, "Error parsing log level")
+
 	initMime()
 
 	// Create waitGroup
@@ -59,18 +59,6 @@ func main() {
 	log.Info().Msg("Waiting for PushMetrics goroutine to gracefully shutdown")
 	wg.Wait()
 	log.Info().Msg("PushMetrics goroutine has shutdown. Main thread is shutting down")
-}
-
-func initLogger() {
-	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	logLevel, ok := os.LookupEnv("LOG_LEVEL")
-	if !ok {
-		logLevel = "INFO"
-	}
-	level, err := zerolog.ParseLevel(logLevel)
-	checkError(err, "Error parsing log level")
-	zerolog.SetGlobalLevel(level)
 }
 
 func initMime() {
