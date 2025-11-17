@@ -3,7 +3,6 @@ package metrics
 import (
 	"context"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -36,10 +35,7 @@ func (m Metrics) ErrorCounter() prometheus.Counter {
 	return m.errorCounter
 }
 
-func PushMetrics(reg *prometheus.Registry, wg *sync.WaitGroup, ctx context.Context, t time.Duration) {
-	// Executes after ticker.Stop() as multiple defer use a stack
-	defer wg.Done()
-
+func PushMetrics(reg *prometheus.Registry, ctx context.Context, t time.Duration) {
 	ticker := time.NewTicker(t)
 
 	defer ticker.Stop()
