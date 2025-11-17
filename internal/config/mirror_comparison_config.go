@@ -5,9 +5,8 @@ import (
 )
 
 type MirrorComparisonConfig struct {
-	FastlyApiKey                 string `env:"FASTLY_API_KEY"`
-	CompareTopUnsampledCount     int    `env:"COMPARE_TOP_UNSAMPLED_COUNT" envDefault:"100"`
-	CompareRemainingSampledCount int    `env:"COMPARE_REMAINING_SAMPLED_COUNT" envDefault:"100"`
+	CompareTopUnsampledCount     int `env:"COMPARE_TOP_UNSAMPLED_COUNT" envDefault:"100"`
+	CompareRemainingSampledCount int `env:"COMPARE_REMAINING_SAMPLED_COUNT" envDefault:"100"`
 }
 
 func NewMirrorComparisonConfig() (*MirrorComparisonConfig, error) {
