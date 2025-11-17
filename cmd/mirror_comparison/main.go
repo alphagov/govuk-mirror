@@ -28,16 +28,20 @@ func main() {
 	}
 
 	awsCfg, err := awsConfig.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to load AWS config")
+	}
+
 	athenaClient := athena.NewFromConfig(awsCfg)
 	s3Client := s3.NewFromConfig(awsCfg)
 
 	topUrls := top_urls.NewAwsTopUrlsClient(*cfg, athenaClient, s3Client)
 	urls, err := topUrls.GetTopUrls(rand.New(rand.NewSource(time.Now().UnixNano())))
-
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error generating top urls")
 	}
 
+	// This is temporary, to be removed in a future PR
 	printTopUrls(urls)
 
 	log.Fatal().Msg("Command not yet implemented")
