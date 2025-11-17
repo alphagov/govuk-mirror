@@ -112,6 +112,11 @@ var routes = map[string]struct {
 						  <loc>/3</loc>
 						  <priority>0.5</priority>
 						</url>
+						<url>
+						  <loc>/500</loc>
+						  <lastmod>2025-01-07T11:00:00+00:00</lastmod>
+						  <priority>0.5</priority>
+						</url>
 						</urlset>`),
 	},
 	"/assets/style.css": {
@@ -174,6 +179,11 @@ var routes = map[string]struct {
 		status:      http.StatusNotFound,
 		contentType: "text/html",
 		body:        []byte(`<!DOCTYPE html><html><head><title>404 - Not Found</title></head></html>`),
+	},
+	"/500": {
+		status:      http.StatusInternalServerError,
+		contentType: "text/html",
+		body:        []byte(`<!DOCTYPE html><html><head><title>500 - Server Error</title></head></html>`),
 	},
 	"/503": {
 		status:      http.StatusServiceUnavailable,
@@ -395,7 +405,7 @@ func TestRun(t *testing.T) {
 
 	// Assert that the errorCounter metric has been incremented twice for 404 and 503 errors
 	t.Run("correct errorCounter metric", func(t *testing.T) {
-		assert.Equal(t, float64(2), testutil.ToFloat64(m.ErrorCounter()))
+		assert.Equal(t, float64(3), testutil.ToFloat64(m.ErrorCounter()))
 	})
 
 	// Assert that the expected content matches the actual content saved
@@ -428,6 +438,7 @@ func TestRun(t *testing.T) {
 
 		assert.Less(t, slices.Index(sites_visited, "/2"), slices.Index(sites_visited, "/"))
 		assert.Less(t, slices.Index(sites_visited, "/"), slices.Index(sites_visited, "/1"))
-		assert.Less(t, slices.Index(sites_visited, "/1"), slices.Index(sites_visited, "/3"))
+		assert.Less(t, slices.Index(sites_visited, "/1"), slices.Index(sites_visited, "/500"))
+		assert.Less(t, slices.Index(sites_visited, "/500"), slices.Index(sites_visited, "/3"))
 	})
 }
