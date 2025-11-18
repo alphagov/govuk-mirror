@@ -25,6 +25,10 @@ func TestNewConfig(t *testing.T) {
 				MetricRefreshInterval: 10 * time.Second,
 				Async:                 true,
 				MirrorS3BucketName:    "",
+				MirrorFreshnessUrl:    "",
+				MirrorAvailabilityUrl: "",
+				Backends:              nil,
+				RefreshInterval:       4 * time.Hour,
 			},
 		},
 		{
@@ -41,6 +45,10 @@ func TestNewConfig(t *testing.T) {
 				"METRIC_REFRESH_INTERVAL": "10s",
 				"ASYNC":                   "true",
 				"S3_BUCKET_NAME":          "s3-bucket-name",
+				"MIRROR_AVAILABILITY_URL": "http://example.com/availability",
+				"MIRROR_FRESHNESS_URL":    "http://example.com/freshness",
+				"BACKENDS":                "backend1,backend2",
+				"REFRESH_INTERVAL":        "30m",
 			},
 			expected: &Config{
 				Site:           "example.com",
@@ -62,6 +70,10 @@ func TestNewConfig(t *testing.T) {
 				MetricRefreshInterval: 10 * time.Second,
 				Async:                 true,
 				MirrorS3BucketName:    "s3-bucket-name",
+				MirrorFreshnessUrl:    "http://example.com/freshness",
+				MirrorAvailabilityUrl: "http://example.com/availability",
+				Backends:              []string{"backend1", "backend2"},
+				RefreshInterval:       30 * time.Minute,
 			},
 		},
 	}
