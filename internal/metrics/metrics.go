@@ -11,28 +11,56 @@ import (
 )
 
 type Metrics struct {
-	errorCounter prometheus.Counter
+	httpErrorCounter     prometheus.Counter
+	downloadErrorCounter prometheus.Counter
+	downloadCounter      prometheus.Counter
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
 	m := &Metrics{
-		errorCounter: prometheus.NewCounter(prometheus.CounterOpts{
+		httpErrorCounter: prometheus.NewCounter(prometheus.CounterOpts{
 			Name: "crawler_errors_total",
-			Help: "Total number of errors encountered by the crawler",
+			Help: "Total number of HTTP errors encountered by the crawler",
+		}),
+		downloadErrorCounter: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "download_errors_total",
+			Help: "Total number of download errors encountered by the crawler",
+		}),
+		downloadCounter: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "download_total",
+			Help: "Total number of files downloaded by the crawler",
 		}),
 	}
 
-	reg.MustRegister(m.errorCounter)
+	reg.MustRegister(m.httpErrorCounter)
+	reg.MustRegister(m.downloadErrorCounter)
+	reg.MustRegister(m.downloadCounter)
 
 	return m
 }
 
-func CrawlerError(m *Metrics) {
-	m.errorCounter.Inc()
+func HttpCrawlerError(m *Metrics) {
+	m.httpErrorCounter.Inc()
 }
 
-func (m Metrics) ErrorCounter() prometheus.Counter {
-	return m.errorCounter
+func DownloadCounter(m *Metrics) {
+	m.downloadCounter.Inc()
+}
+
+func DownloadCrawlerError(m *Metrics) {
+	m.downloadErrorCounter.Inc()
+}
+
+func (m Metrics) HttpErrorCounter() prometheus.Counter {
+	return m.httpErrorCounter
+}
+
+func (m Metrics) DownloadErrorCounter() prometheus.Counter {
+	return m.downloadErrorCounter
+}
+
+func (m Metrics) DownloadCounter() prometheus.Counter {
+	return m.downloadCounter
 }
 
 func PushMetrics(reg *prometheus.Registry, ctx context.Context, t time.Duration) {

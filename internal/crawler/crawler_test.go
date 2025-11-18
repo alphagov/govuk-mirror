@@ -405,7 +405,12 @@ func TestRun(t *testing.T) {
 
 	// Assert that the errorCounter metric has been incremented twice for 404 and 503 errors
 	t.Run("correct errorCounter metric", func(t *testing.T) {
-		assert.Equal(t, float64(3), testutil.ToFloat64(m.ErrorCounter()))
+		assert.Equal(t, float64(3), testutil.ToFloat64(m.HttpErrorCounter()))
+	})
+
+	// Assert that the downloadCounter metric has been incremented 14 times
+	t.Run("correct downloadCounter metric", func(t *testing.T) {
+		assert.Equal(t, float64(14), testutil.ToFloat64(m.DownloadCounter()))
 	})
 
 	// Assert that the expected content matches the actual content saved
