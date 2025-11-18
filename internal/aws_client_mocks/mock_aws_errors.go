@@ -1,4 +1,4 @@
-package top_urls_test
+package aws_client_mocks_test
 
 import (
 	"fmt"
