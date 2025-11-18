@@ -23,7 +23,7 @@ func TestNewConfig(t *testing.T) {
 				Concurrency:           10,
 				SkipValidation:        false,
 				MetricRefreshInterval: 10 * time.Second,
-				Async:          		true,
+				Async:                 true,
 			},
 		},
 		{

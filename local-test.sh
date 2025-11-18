@@ -36,6 +36,7 @@ export RATE_LIMIT_TOKEN
 export HEADERS
 export SKIP_VALIDATION="true"  # Skip validation for local testing
 export LOG_LEVEL="INFO"        # Enable info logging to see progress
+export PROMETHEUS_PUSHGATEWAY_URL="http://localhost:9091"
 
 # Change to data directory
 cd "${DATA_DIR}"

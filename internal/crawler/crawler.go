@@ -80,14 +80,14 @@ func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, err
 	c.OnResponse(responseHandler(m))
 
 	// Set up a crawling logic
-	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler(m))
+	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler())
 
 	// crawl sitemap index
 	c.OnXML("//sitemapindex", sitemapXmlHandler(crawlState))
 	// crawl urlset in sitemap
 	c.OnXML("//urlset", urlsetXmlHandler(crawlState))
 
-	c.OnScraped(scrapeHandler(m, crawlState))
+	c.OnScraped(scrapeHandler(crawlState))
 
 	return c, nil
 }
@@ -108,7 +108,7 @@ func redirectHandler(m *metrics.Metrics) func(req *http.Request, via []*http.Req
 			body := file.RedirectHTMLBody(req.URL.String())
 			err := file.Save(redirectReq.URL, "text/html", body)
 			if err != nil {
-				metrics.CrawlerError(m)
+				metrics.HttpCrawlerError(m)
 				return err
 			}
 		}
@@ -116,7 +116,7 @@ func redirectHandler(m *metrics.Metrics) func(req *http.Request, via []*http.Req
 	}
 }
 
-func htmlHandler(m *metrics.Metrics) func(e *colly.HTMLElement) {
+func htmlHandler() func(e *colly.HTMLElement) {
 	return func(e *colly.HTMLElement) {
 		var link string
 		switch e.Name {
@@ -163,7 +163,7 @@ func urlsetXmlHandler(crawlState *CrawlState) func(e *colly.XMLElement) {
 	}
 }
 
-func scrapeHandler(m *metrics.Metrics, crawlState *CrawlState) func(*colly.Response) {
+func scrapeHandler(crawlState *CrawlState) func(*colly.Response) {
 	return func(r *colly.Response) {
 		if crawlState.isScraping || r.Request.URL.String() == "/sitemap.xml" || crawlState.counterSitemaps < crawlState.numSitemaps {
 			return
@@ -186,7 +186,7 @@ func responseHandler(m *metrics.Metrics) func(*colly.Response) {
 
 		mediaType, _, err := mime.ParseMediaType(contentType)
 		if err != nil {
-			metrics.CrawlerError(m)
+			metrics.HttpCrawlerError(m)
 			log.Error().Err(err).Str("crawled_url", r.Request.URL.String()).Msg("Error parsing Content-Type header")
 		}
 		if mediaType == "text/css" {
@@ -211,9 +211,10 @@ func responseHandler(m *metrics.Metrics) func(*colly.Response) {
 
 		err = file.Save(r.Request.URL, contentType, r.Body)
 		if err != nil {
-			metrics.CrawlerError(m)
+			metrics.DownloadCrawlerError(m)
 			log.Error().Err(err).Str("crawled_url", r.Request.URL.String()).Msg("Error saving response to disk")
 		} else {
+			metrics.DownloadCounter(m)
 			log.Info().Str("crawled_url", r.Request.URL.String()).Str("type", mediaType).Msg("Downloaded file")
 		}
 	}
@@ -230,8 +231,7 @@ func errorHandler(m *metrics.Metrics) func(*colly.Response, error) {
 			return
 		}
 
-		metrics.CrawlerError(m)
-
+		metrics.HttpCrawlerError(m)
 		log.Error().Err(err).Int("status", r.StatusCode).Str("crawled_url", r.Request.URL.String()).Msg("Error returned from request")
 	}
 }
