@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"mirrorer/internal/aws_client_interfaces"
 	"mirrorer/internal/config"
 	"mirrorer/internal/top_urls"
 
@@ -72,9 +71,9 @@ func TestAwsGetTopUrls(t *testing.T) {
 		random := rand.New(rand.NewSource(99))
 		expectedErr := fmt.Errorf("Test Error Returned by AWS")
 
-		athenaClient := aws_client_interfaces.NewMockAthenaClient()
+		athenaClient := NewMockAthenaClient()
 		athenaClient.AddMockStartQueryExecutionError(athenaStartQueryExecutionInput, expectedErr)
-		s3Client := aws_client_interfaces.NewMockS3Client()
+		s3Client := NewMockS3Client()
 
 		topUrlsClient := top_urls.NewAwsTopUrlsClient(cfg, &athenaClient, &s3Client)
 
@@ -88,10 +87,10 @@ func TestAwsGetTopUrls(t *testing.T) {
 		random := rand.New(rand.NewSource(99))
 		expectedErr := fmt.Errorf("Test Error Returned by AWS")
 
-		athenaClient := aws_client_interfaces.NewMockAthenaClient()
+		athenaClient := NewMockAthenaClient()
 		athenaClient.AddMockStartQueryExecutionResponse(athenaStartQueryExecutionInput, queryExecutionId)
 		athenaClient.AddMockGetQueryExecutionError(athenaGetQueryExecutionInput, expectedErr)
-		s3Client := aws_client_interfaces.NewMockS3Client()
+		s3Client := NewMockS3Client()
 
 		topUrlsClient := top_urls.NewAwsTopUrlsClient(cfg, &athenaClient, &s3Client)
 
@@ -105,10 +104,10 @@ func TestAwsGetTopUrls(t *testing.T) {
 		t.Run(fmt.Sprintf("GetTopUrls returns an AthenaQueryFailed error if the athena query does not end in success with state %s", terminalState), func(t *testing.T) {
 			random := rand.New(rand.NewSource(99))
 
-			athenaClient := aws_client_interfaces.NewMockAthenaClient()
+			athenaClient := NewMockAthenaClient()
 			athenaClient.AddMockStartQueryExecutionResponse(athenaStartQueryExecutionInput, queryExecutionId)
 			athenaClient.AddMockGetQueryExecutionResponse(athenaGetQueryExecutionInput, queryExecutionId, terminalState, s3Path)
-			s3Client := aws_client_interfaces.NewMockS3Client()
+			s3Client := NewMockS3Client()
 
 			topUrlsClient := top_urls.NewAwsTopUrlsClient(cfg, &athenaClient, &s3Client)
 
@@ -124,10 +123,10 @@ func TestAwsGetTopUrls(t *testing.T) {
 		random := rand.New(rand.NewSource(99))
 		expectedErr := fmt.Errorf("Test Error Returned by AWS")
 
-		athenaClient := aws_client_interfaces.NewMockAthenaClient()
+		athenaClient := NewMockAthenaClient()
 		athenaClient.AddMockStartQueryExecutionResponse(athenaStartQueryExecutionInput, queryExecutionId)
 		athenaClient.AddMockGetQueryExecutionResponse(athenaGetQueryExecutionInput, queryExecutionId, athenaTypes.QueryExecutionStateSucceeded, s3Path)
-		s3Client := aws_client_interfaces.NewMockS3Client()
+		s3Client := NewMockS3Client()
 		s3Client.AddMockGetObjectError(s3GetObjectInput, expectedErr)
 
 		topUrlsClient := top_urls.NewAwsTopUrlsClient(cfg, &athenaClient, &s3Client)
@@ -165,7 +164,7 @@ func TestAwsGetTopUrls(t *testing.T) {
 			),
 		)
 
-		athenaClient := aws_client_interfaces.NewMockAthenaClient()
+		athenaClient := NewMockAthenaClient()
 		athenaClient.AddMockStartQueryExecutionResponse(
 			&athena.StartQueryExecutionInput{
 				QueryString:         &queryString,
@@ -186,7 +185,7 @@ func TestAwsGetTopUrls(t *testing.T) {
 				s3Path,
 			)
 		}
-		s3Client := aws_client_interfaces.NewMockS3Client()
+		s3Client := NewMockS3Client()
 		s3Client.AddMockGetObjectResponse(
 			&s3.GetObjectInput{
 				Bucket: &s3Bucket,
