@@ -8,12 +8,26 @@ import (
 	"mirrorer/internal/file"
 	"mirrorer/internal/metrics"
 	"net/http"
+	"slices"
 	"strings"
 
+	"github.com/antchfx/xmlquery"
 	"github.com/gocolly/colly/v2"
 
 	"github.com/rs/zerolog/log"
 )
+
+type entry struct {
+	val string
+	key string
+}
+
+type CrawlState struct {
+	entries         []entry
+	numSitemaps     int
+	counterSitemaps int
+	isScraping      bool
+}
 
 type Crawler struct {
 	cfg       *config.Config
@@ -35,8 +49,15 @@ func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, err
 		colly.AllowedDomains(cfg.AllowedDomains...),
 		colly.URLFilters(cfg.URLFilters...),
 		colly.DisallowedURLFilters(cfg.DisallowedURLFilters...),
-		colly.Async(true),
+		colly.Async(cfg.Async),
 	)
+
+	crawlState := &CrawlState{
+		entries:         []entry{},
+		numSitemaps:     0,
+		counterSitemaps: 0,
+		isScraping:      false,
+	}
 
 	client := client.NewClient(c, redirectHandler(m))
 	c.SetClient(client)
@@ -61,9 +82,12 @@ func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, err
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler(m))
 
-	// Crawl sitemap indexes and sitemaps
-	c.OnXML("//sitemapindex/sitemap/loc", xmlHandler(m))
-	c.OnXML("//urlset/url/loc", xmlHandler(m))
+	// crawl sitemap index
+	c.OnXML("//sitemapindex", sitemapXmlHandler(crawlState))
+	// crawl urlset in sitemap
+	c.OnXML("//urlset", urlsetXmlHandler(crawlState))
+
+	c.OnScraped(scrapeHandler(m, crawlState))
 
 	return c, nil
 }
@@ -106,20 +130,52 @@ func htmlHandler(m *metrics.Metrics) func(e *colly.HTMLElement) {
 			return
 		}
 
-		err := e.Request.Visit(link)
-		if err != nil && !isForbiddenURLError(err) {
-			metrics.CrawlerError(m)
-			log.Error().Err(err).Str("link", link).Msg("Error attempting to visit link")
-		}
+		_ = e.Request.Visit(link)
 	}
 }
 
-func xmlHandler(m *metrics.Metrics) func(e *colly.XMLElement) {
+func sitemapXmlHandler(crawlState *CrawlState) func(e *colly.XMLElement) {
 	return func(e *colly.XMLElement) {
-		err := e.Request.Visit(e.Text)
-		if err != nil && !isForbiddenURLError(err) {
-			metrics.CrawlerError(m)
-			log.Error().Err(err).Str("link", e.Text).Msg("Error attempting to visit link")
+		nodes, _ := xmlquery.QueryAll(e.DOM.(*xmlquery.Node), "//sitemap")
+		crawlState.numSitemaps = len(nodes)
+
+		xmlquery.FindEach(e.DOM.(*xmlquery.Node), "//sitemap", func(i int, child *xmlquery.Node) {
+			_ = e.Request.Visit(child.SelectElement("loc").InnerText())
+		})
+	}
+}
+
+func urlsetXmlHandler(crawlState *CrawlState) func(e *colly.XMLElement) {
+	return func(e *colly.XMLElement) {
+		xmlquery.FindEach(e.DOM.(*xmlquery.Node), "//url", func(i int, child *xmlquery.Node) {
+			var lastmod string
+			if child.SelectElement("lastmod") == nil {
+				log.Info().Str("loc", child.SelectElement("loc").InnerText()).Msg("No lastmod element")
+				lastmod = "2000-01-01T00:00:00Z"
+			} else {
+				lastmod = child.SelectElement("lastmod").InnerText()
+			}
+			crawlState.entries = append(crawlState.entries, entry{
+				val: lastmod,
+				key: child.SelectElement("loc").InnerText()})
+		})
+		crawlState.counterSitemaps += 1
+	}
+}
+
+func scrapeHandler(m *metrics.Metrics, crawlState *CrawlState) func(*colly.Response) {
+	return func(r *colly.Response) {
+		if crawlState.isScraping || r.Request.URL.String() == "/sitemap.xml" || crawlState.counterSitemaps < crawlState.numSitemaps {
+			return
+		}
+		crawlState.isScraping = true
+
+		slices.SortFunc(crawlState.entries, func(a, b entry) int {
+			return strings.Compare(a.val, b.val)
+		})
+		slices.Reverse(crawlState.entries)
+		for _, ei := range crawlState.entries {
+			_ = r.Request.Visit(ei.key)
 		}
 	}
 }
@@ -137,11 +193,7 @@ func responseHandler(m *metrics.Metrics) func(*colly.Response) {
 			urls := file.FindCssUrls(r.Body)
 
 			for _, url := range urls {
-				err := r.Request.Visit(url)
-				if err != nil && !isForbiddenURLError(err) {
-					metrics.CrawlerError(m)
-					log.Error().Err(err).Str("link", url).Msg("Error attempting to visit link")
-				}
+				_ = r.Request.Visit(url)
 			}
 		} else if strings.Contains(mediaType, "openxmlformats") || strings.Contains(mediaType, "+xml") {
 			/*
@@ -173,7 +225,7 @@ func isForbiddenURLError(err error) bool {
 
 func errorHandler(m *metrics.Metrics) func(*colly.Response, error) {
 	return func(r *colly.Response, err error) {
-		if errors.Is(err, client.DisallowedURLError{}) {
+		if errors.Is(err, client.DisallowedURLError{}) || isForbiddenURLError(err) {
 			// Normal behaviour to not follow the URL, so we can just ignore this error
 			return
 		}
