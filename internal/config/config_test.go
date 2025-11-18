@@ -24,6 +24,10 @@ func TestNewConfig(t *testing.T) {
 				SkipValidation:        false,
 				MetricRefreshInterval: 10 * time.Second,
 				Async:                 true,
+				MirrorFreshnessUrl:    "",
+				MirrorAvailabilityUrl: "",
+				Backends:              nil,
+				RefreshInterval:       4 * time.Hour,
 			},
 		},
 		{
@@ -39,6 +43,10 @@ func TestNewConfig(t *testing.T) {
 				"SKIP_VALIDATION":         "true",
 				"METRIC_REFRESH_INTERVAL": "10s",
 				"ASYNC":                   "true",
+				"MIRROR_AVAILABILITY_URL": "http://example.com/availability",
+				"MIRROR_FRESHNESS_URL":    "http://example.com/freshness",
+				"BACKENDS":                "backend1,backend2",
+				"REFRESH_INTERVAL":        "30m",
 			},
 			expected: &Config{
 				Site:           "example.com",
@@ -59,6 +67,10 @@ func TestNewConfig(t *testing.T) {
 				SkipValidation:        true,
 				MetricRefreshInterval: 10 * time.Second,
 				Async:                 true,
+				MirrorFreshnessUrl:    "http://example.com/freshness",
+				MirrorAvailabilityUrl: "http://example.com/availability",
+				Backends:              []string{"backend1", "backend2"},
+				RefreshInterval:       30 * time.Minute,
 			},
 		},
 	}

@@ -19,6 +19,10 @@ type Config struct {
 	SkipValidation        bool              `env:"SKIP_VALIDATION" envDefault:"false"`
 	MetricRefreshInterval time.Duration     `env:"METRIC_REFRESH_INTERVAL" envDefault:"10s"`
 	Async                 bool              `env:"ASYNC" envDefault:"true"`
+	MirrorFreshnessUrl    string            `env:"MIRROR_FRESHNESS_URL"`
+	MirrorAvailabilityUrl string            `env:"MIRROR_AVAILABILITY_URL"`
+	Backends              []string          `env:"BACKENDS" envSeparator:","`
+	RefreshInterval       time.Duration     `env:"REFRESH_INTERVAL" envDefault:"4h"`
 }
 
 func NewConfig() (*Config, error) {

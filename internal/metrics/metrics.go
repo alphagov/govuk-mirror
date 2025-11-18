@@ -2,6 +2,9 @@ package metrics
 
 import (
 	"context"
+	"fmt"
+	"mirrorer/internal/config"
+	"net/http"
 	"os"
 	"time"
 
@@ -10,11 +13,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var httpClient = &http.Client{}
+
 type Metrics struct {
-	httpErrorCounter     prometheus.Counter
-	downloadErrorCounter prometheus.Counter
-	downloadCounter      prometheus.Counter
-	crawledPagesCounter  prometheus.Counter
+	httpErrorCounter         prometheus.Counter
+	downloadErrorCounter     prometheus.Counter
+	downloadCounter          prometheus.Counter
+	crawledPagesCounter      prometheus.Counter
+	mirrorLastUpdatedGauge   *prometheus.GaugeVec
+	mirrorResponseStatusCode *prometheus.GaugeVec
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
@@ -35,12 +42,22 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 			Name: "download_total",
 			Help: "Total number of files downloaded by the crawler",
 		}),
+		mirrorLastUpdatedGauge: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "govuk_mirror_last_updated_time",
+			Help: "Last time the mirror was updated",
+		}, []string{"backend"}),
+		mirrorResponseStatusCode: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "govuk_mirror_response_status_code",
+			Help: "Response status code for the MIRROR_AVAILABILITY_URL probe",
+		}, []string{"backend"}),
 	}
 
 	reg.MustRegister(m.httpErrorCounter)
 	reg.MustRegister(m.downloadErrorCounter)
 	reg.MustRegister(m.downloadCounter)
 	reg.MustRegister(m.crawledPagesCounter)
+	reg.MustRegister(m.mirrorLastUpdatedGauge)
+	reg.MustRegister(m.mirrorResponseStatusCode)
 
 	return m
 }
@@ -75,6 +92,84 @@ func (m Metrics) DownloadCounter() prometheus.Counter {
 
 func (m Metrics) CrawledPagesCounter() prometheus.Counter {
 	return m.crawledPagesCounter
+}
+
+func fetchMirrorAvailabilityMetric(backend string, url string) (httpStatus int, err error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return
+	}
+	req.Header.Set("Backend-Override", backend)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return
+	}
+
+	return resp.StatusCode, nil
+}
+
+func fetchMirrorFreshnessMetric(backend string, url string) (seconds float64, err error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return
+	}
+	req.Header.Set("Backend-Override", backend)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return -1, fmt.Errorf("request failed with status code: %s", resp.Status)
+	}
+
+	lastModified := resp.Header.Get("Last-Modified")
+
+	t, err := time.Parse(time.RFC1123, lastModified)
+	if err != nil {
+		return
+	}
+
+	return float64(t.Unix()), nil
+}
+
+func updateMirrorLastUpdatedGauge(m *Metrics, url string, backend string) error {
+	freshness, err := fetchMirrorFreshnessMetric(backend, url)
+	if err != nil {
+		return err
+	}
+
+	m.mirrorLastUpdatedGauge.With(prometheus.Labels{"backend": backend}).Set(freshness)
+	return nil
+}
+
+func updateMirrorResponseStatusCode(m *Metrics, url string, backend string) error {
+	statusCode, err := fetchMirrorAvailabilityMetric(backend, url)
+	if err != nil {
+		return err
+	}
+
+	m.mirrorResponseStatusCode.With(prometheus.Labels{"backend": backend}).Set(float64(statusCode))
+	return nil
+}
+
+func UpdateMetrics(m *Metrics, cfg *config.Config) {
+	for {
+		for _, backend := range cfg.Backends {
+			err := updateMirrorLastUpdatedGauge(m, cfg.MirrorFreshnessUrl, backend)
+			if err != nil {
+				log.Error().Str("metric", "govuk_mirror_last_updated_time").Str("backend", backend).Err(err).Msg("Error updating metrics")
+			}
+
+			err = updateMirrorResponseStatusCode(m, cfg.MirrorAvailabilityUrl, backend)
+			if err != nil {
+				log.Error().Str("metric", "govuk_mirror_response_status_code").Str("backend", backend).Err(err).Msg("Error updating metrics")
+			}
+		}
+		time.Sleep(cfg.RefreshInterval)
+	}
 }
 
 func PushMetrics(reg *prometheus.Registry, ctx context.Context, t time.Duration) {
