@@ -44,7 +44,11 @@ func (e *AthenaQueryFailedError) Error() string {
 	)
 }
 
-func NewAwsTopUrlsClient(cfg config.MirrorComparisonConfig, athenaClient aws_client_interfaces.AthenaExecuteQueryApi, s3Client aws_client_interfaces.S3GetObjectAPI) AwsTopUrlsClient {
+func NewAwsTopUrlsClient(
+	cfg config.MirrorComparisonConfig,
+	athenaClient aws_client_interfaces.AthenaExecuteQueryApi,
+	s3Client aws_client_interfaces.S3GetObjectAPI,
+) AwsTopUrlsClient {
 	return AwsTopUrlsClient{
 		cfg:          cfg,
 		athenaClient: athenaClient,
