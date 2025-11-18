@@ -27,7 +27,7 @@ func main() {
 		log.Fatal().Err(err).Msg("Error parsing config")
 	}
 
-	awsCfg, err := awsConfig.LoadDefaultConfig(context.TODO())
+	awsCfg, err := awsConfig.LoadDefaultConfig(context.Background())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load AWS config")
 	}
