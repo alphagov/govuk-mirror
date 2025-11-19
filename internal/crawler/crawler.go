@@ -107,8 +107,9 @@ func redirectHandler(m *metrics.Metrics) func(req *http.Request, via []*http.Req
 		for _, redirectReq := range via {
 			body := file.RedirectHTMLBody(req.URL.String())
 			err := file.Save(redirectReq.URL, "text/html", body)
+			metrics.DownloadCounter(m)
 			if err != nil {
-				metrics.HttpCrawlerError(m)
+				metrics.DownloadCrawlerError(m)
 				return err
 			}
 		}
