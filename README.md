@@ -18,6 +18,10 @@ Configuration is handled through environment variables as listed below:
 | `DISALLOWED_URL_RULES` | `/search/.*,/government/.*\.atom` | A comma-separated list of regex patterns matching URLs that the crawler should avoid. |
 | `SKIP_VALIDATION` | `true` | Skip domain accessibility validation before crawling. Useful for offline testing. |
 | `ASYNC` | `true` | Async crawling. Set to false for testing as a race condition could fail the crawler tests. |
+| `MIRROR_FRESHNESS_URL` | `https://www.gov.uk/last-updated.txt` | Specifies the URL to probe for Mirror freshness. |
+| `MIRROR_AVAILABILITY_URL` | `https://www.gov.uk` | Specifies the URL to probe for Mirror freshness |
+| `BACKENDS` | `mirrorS3,mirrorS3Replica,mirrorGCS` | A comma-separated list of backend overrides to collect metrics for. |
+| `REFRESH_INTERVAL` | `4h` | The interval refresh the metrics. Defaults to 4h |
 
 ## Crawling order
 
@@ -36,6 +40,8 @@ Mirror pushes the following metrics to Prometheus Pushgateway:
 | `crawler_duration_minutes` | Number of minutes taken by the crawler |
 | `files_uploaded_total` | Total number of files the crawler has uploaded to the mirror |
 | `file_upload_failures_total` | Total number of upload failures encounterd by the crawler |
+| `govuk_mirror_last_updated_time` | A unix timestamp representing the Last-Modified header of the page referenced by the MIRROR_FRESHNESS_URL. Has the label backend for each backend override being used. |
+| `govuk_mirror_response_status_code` | An HTTP status code representing the response status of the page referenced by the MIRROR_AVAILABILITY_URL. Has the label backend for each backend override being used. |
 
 ### View metrics locally
 
