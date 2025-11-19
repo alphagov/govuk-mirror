@@ -106,6 +106,7 @@ func redirectHandler(m *metrics.Metrics) func(req *http.Request, via []*http.Req
 	return func(req *http.Request, via []*http.Request) error {
 		for _, redirectReq := range via {
 			body := file.RedirectHTMLBody(req.URL.String())
+			metrics.CrawledPagesCounter(m)
 			err := file.Save(redirectReq.URL, "text/html", body)
 			metrics.DownloadCounter(m)
 			if err != nil {
@@ -183,6 +184,7 @@ func scrapeHandler(crawlState *CrawlState) func(*colly.Response) {
 
 func responseHandler(m *metrics.Metrics) func(*colly.Response) {
 	return func(r *colly.Response) {
+
 		contentType := r.Headers.Get("Content-Type")
 
 		mediaType, _, err := mime.ParseMediaType(contentType)
@@ -209,6 +211,8 @@ func responseHandler(m *metrics.Metrics) func(*colly.Response) {
 
 			r.Headers.Set("Content-Type", strings.ReplaceAll(contentType, "xml", ""))
 		}
+
+		metrics.CrawledPagesCounter(m)
 
 		err = file.Save(r.Request.URL, contentType, r.Body)
 		if err != nil {

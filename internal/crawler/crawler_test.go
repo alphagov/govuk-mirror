@@ -416,6 +416,14 @@ func TestRun(t *testing.T) {
 		assert.Equal(t, float64(len(tests)), testutil.ToFloat64(m.DownloadCounter()))
 	})
 
+	/*
+		Assert that the crawledPagesCounter metric has been incremented by the number of
+		files in the test array
+	*/
+	t.Run("correct crawledPagesCounter metric", func(t *testing.T) {
+		assert.Equal(t, float64(len(tests)), testutil.ToFloat64(m.CrawledPagesCounter()))
+	})
+
 	// Assert that the expected content matches the actual content saved
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

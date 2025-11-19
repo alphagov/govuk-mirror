@@ -14,10 +14,15 @@ type Metrics struct {
 	httpErrorCounter     prometheus.Counter
 	downloadErrorCounter prometheus.Counter
 	downloadCounter      prometheus.Counter
+	crawledPagesCounter  prometheus.Counter
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
 	m := &Metrics{
+		crawledPagesCounter: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "crawled_pages_total",
+			Help: "Total number of pages successfully crawled",
+		}),
 		httpErrorCounter: prometheus.NewCounter(prometheus.CounterOpts{
 			Name: "crawler_errors_total",
 			Help: "Total number of HTTP errors encountered by the crawler",
@@ -35,6 +40,7 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 	reg.MustRegister(m.httpErrorCounter)
 	reg.MustRegister(m.downloadErrorCounter)
 	reg.MustRegister(m.downloadCounter)
+	reg.MustRegister(m.crawledPagesCounter)
 
 	return m
 }
@@ -51,6 +57,10 @@ func DownloadCrawlerError(m *Metrics) {
 	m.downloadErrorCounter.Inc()
 }
 
+func CrawledPagesCounter(m *Metrics) {
+	m.crawledPagesCounter.Inc()
+}
+
 func (m Metrics) HttpErrorCounter() prometheus.Counter {
 	return m.httpErrorCounter
 }
@@ -61,6 +71,10 @@ func (m Metrics) DownloadErrorCounter() prometheus.Counter {
 
 func (m Metrics) DownloadCounter() prometheus.Counter {
 	return m.downloadCounter
+}
+
+func (m Metrics) CrawledPagesCounter() prometheus.Counter {
+	return m.crawledPagesCounter
 }
 
 func PushMetrics(reg *prometheus.Registry, ctx context.Context, t time.Duration) {

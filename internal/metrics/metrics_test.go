@@ -37,3 +37,13 @@ func TestIncrementDownloadCounterMetric(t *testing.T) {
 
 	assert.Equal(t, float64(3), testutil.ToFloat64(m.DownloadCounter()))
 }
+
+func TestIncrementCrawledPagesCounterMetric(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	m := NewMetrics(reg)
+	CrawledPagesCounter(m)
+	CrawledPagesCounter(m)
+	CrawledPagesCounter(m)
+
+	assert.Equal(t, float64(3), testutil.ToFloat64(m.CrawledPagesCounter()))
+}
