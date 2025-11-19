@@ -408,9 +408,12 @@ func TestRun(t *testing.T) {
 		assert.Equal(t, float64(3), testutil.ToFloat64(m.HttpErrorCounter()))
 	})
 
-	// Assert that the downloadCounter metric has been incremented 14 times
+	/*
+		Assert that the downloadCounter metric has been incremented by the number of
+		files in the test array
+	*/
 	t.Run("correct downloadCounter metric", func(t *testing.T) {
-		assert.Equal(t, float64(14), testutil.ToFloat64(m.DownloadCounter()))
+		assert.Equal(t, float64(len(tests)), testutil.ToFloat64(m.DownloadCounter()))
 	})
 
 	// Assert that the expected content matches the actual content saved
