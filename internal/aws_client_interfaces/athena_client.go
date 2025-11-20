@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/athena"
 )
 
-//go:generate go tool counterfeiter -o ../aws_client_mocks/ . AthenaExecuteQueryApi
+//counterfeiter:generate -o ../aws_client_mocks/ . AthenaExecuteQueryApi
 type AthenaExecuteQueryApi interface {
 	GetQueryExecution(ctx context.Context, params *athena.GetQueryExecutionInput, optFns ...func(*athena.Options)) (*athena.GetQueryExecutionOutput, error)
 	StartQueryExecution(ctx context.Context, params *athena.StartQueryExecutionInput, optFns ...func(*athena.Options)) (*athena.StartQueryExecutionOutput, error)

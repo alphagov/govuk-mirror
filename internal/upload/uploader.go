@@ -16,7 +16,7 @@ import (
 
 // Uploader represents the ability to upload a file to a remote file storage
 //
-//go:generate go tool counterfeiter . Uploader
+//counterfeiter:generate . Uploader
 type Uploader interface {
 	// UploadFile uploads the file at filePath to the destinationKey in the remote file storage
 	UploadFile(ctx context.Context, filePath string, destinationKey string) error
