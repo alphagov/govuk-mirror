@@ -11,11 +11,13 @@ import (
 )
 
 type Metrics struct {
-	httpErrorCounter     prometheus.Counter
-	downloadErrorCounter prometheus.Counter
-	downloadCounter      prometheus.Counter
-	crawledPagesCounter  prometheus.Counter
-	crawlerDuration      prometheus.Gauge
+	httpErrorCounter          prometheus.Counter
+	downloadErrorCounter      prometheus.Counter
+	downloadCounter           prometheus.Counter
+	crawledPagesCounter       prometheus.Counter
+	crawlerDuration           prometheus.Gauge
+	fileUploadCounter         prometheus.Counter
+	fileUploadFailuresCounter prometheus.Counter
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
@@ -40,6 +42,14 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 			Name: "crawler_duration_minutes",
 			Help: "Duration of crawler in minutes",
 		}),
+		fileUploadCounter: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "files_uploaded_total",
+			Help: "Total number of files the crawler has uploaded to the mirror",
+		}),
+		fileUploadFailuresCounter: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "file_upload_failures_total",
+			Help: "Total number of upload failures encounterd by the crawler",
+		}),
 	}
 
 	reg.MustRegister(m.httpErrorCounter)
@@ -47,6 +57,8 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 	reg.MustRegister(m.downloadCounter)
 	reg.MustRegister(m.crawledPagesCounter)
 	reg.MustRegister(m.crawlerDuration)
+	reg.MustRegister(m.fileUploadCounter)
+	reg.MustRegister(m.fileUploadFailuresCounter)
 
 	return m
 }
@@ -65,6 +77,13 @@ func DownloadCrawlerError(m *Metrics) {
 
 func CrawledPagesCounter(m *Metrics) {
 	m.crawledPagesCounter.Inc()
+}
+func FileUploaded(m *Metrics) {
+	m.fileUploadCounter.Inc()
+}
+
+func FileUploadFailed(m *Metrics) {
+	m.fileUploadFailuresCounter.Inc()
 }
 
 func CrawlerDuration(m *Metrics, t time.Time) {
@@ -89,6 +108,13 @@ func (m Metrics) CrawledPagesCounter() prometheus.Counter {
 
 func (m Metrics) CrawlerDuration() prometheus.Gauge {
 	return m.crawlerDuration
+}
+func (m Metrics) FileUploadCounter() prometheus.Counter {
+	return m.fileUploadCounter
+}
+
+func (m Metrics) FileUploadFailuresCounter() prometheus.Counter {
+	return m.fileUploadFailuresCounter
 }
 
 func PushMetrics(reg *prometheus.Registry, ctx context.Context, t time.Duration) {
