@@ -108,11 +108,13 @@ func redirectHandler(m *metrics.Metrics) func(req *http.Request, via []*http.Req
 			body := file.RedirectHTMLBody(req.URL.String())
 			metrics.CrawledPagesCounter(m)
 			err := file.Save(redirectReq.URL, "text/html", body)
-			metrics.DownloadCounter(m)
 			if err != nil {
 				metrics.DownloadCrawlerError(m)
+				log.Error().Err(err).Str("crawled_url", redirectReq.URL.String()).Str("redirect_url", req.URL.String()).Msg("Error downloading redirect URL to disk")
 				return err
 			}
+			metrics.DownloadCounter(m)
+			log.Info().Str("crawled_url", redirectReq.URL.String()).Str("redirect_url", req.URL.String()).Msg("Downloaded redirect URL to disk")
 		}
 		return nil
 	}
