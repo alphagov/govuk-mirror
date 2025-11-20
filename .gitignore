@@ -29,6 +29,9 @@ go.work
 # Go dependencies
 vendor/
 
+# Generated Go mocks
+fake_*.go
+
 ### macOS ###
 # General
 .DS_Store
