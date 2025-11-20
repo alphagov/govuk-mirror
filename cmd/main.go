@@ -50,7 +50,7 @@ func main() {
 	}
 	s3Client := s3.NewFromConfig(awsCfg)
 
-	cr, err := crawler.NewCrawler(cfg, prometheusMetrics, upload.NewUploader(s3Client, "bucket-name-from-env"))
+	cr, err := crawler.NewCrawler(cfg, prometheusMetrics, upload.NewUploader(s3Client, cfg.MirrorS3BucketName))
 	checkError(err, "Error creating new crawler")
 
 	// Go routine to send metrics to Prometheus Pushgateway
