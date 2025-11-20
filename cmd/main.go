@@ -50,7 +50,7 @@ func main() {
 	})
 
 	// Run crawler
-	cr.Run()
+	cr.Run(prometheusMetrics)
 
 	// Signal PushMetrics goroutine to gracefully shutdown
 	cancel()
