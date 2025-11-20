@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/gocolly/colly/v2"
@@ -92,7 +93,10 @@ func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, err
 	return c, nil
 }
 
-func (cr *Crawler) Run() {
+func (cr *Crawler) Run(m *metrics.Metrics) {
+
+	startTime := time.Now()
+
 	// Start the crawler
 	err := cr.collector.Visit(cr.cfg.Site)
 	if err != nil {
@@ -100,6 +104,8 @@ func (cr *Crawler) Run() {
 	}
 
 	cr.collector.Wait()
+
+	metrics.CrawlerDuration(m, startTime)
 }
 
 func redirectHandler(m *metrics.Metrics) func(req *http.Request, via []*http.Request) error {

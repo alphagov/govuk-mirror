@@ -401,7 +401,7 @@ func TestRun(t *testing.T) {
 	}()
 
 	// Run the Crawler
-	cr.Run()
+	cr.Run(m)
 
 	// Assert that the errorCounter metric has been incremented twice for 404 and 503 errors
 	t.Run("correct errorCounter metric", func(t *testing.T) {
