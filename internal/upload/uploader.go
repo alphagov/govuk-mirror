@@ -2,6 +2,7 @@ package upload
 
 import (
 	"context"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
@@ -66,10 +67,24 @@ func (u S3Uploader) UploadFile(ctx context.Context, filePath string, destination
 	// the object wasn't present in the remote
 	// or the sizes were different
 	if s3ObjectMeta == nil || *s3ObjectMeta.ContentLength != fileInfo.Size() {
+		hasher := sha1.New()
+
+		if _, err := io.Copy(hasher, file); err != nil {
+			return fmt.Errorf("failed to copy file bytes into hashing buffer %s: %w", filePath, err)
+		}
+		_, err = file.Seek(0, io.SeekStart)
+		if err != nil {
+			return fmt.Errorf("failed to rewind file %s: %w", filePath, err)
+		}
+
+		checksum := fmt.Sprintf("%x", hasher.Sum(nil))
+
 		_, err = u.s3.PutObject(ctx, &s3.PutObjectInput{
-			Bucket: aws.String(u.bucketName),
-			Key:    aws.String(destinationKey),
-			Body:   io.Reader(file),
+			Bucket:            aws.String(u.bucketName),
+			Key:               aws.String(destinationKey),
+			Body:              io.Reader(file),
+			ChecksumAlgorithm: types.ChecksumAlgorithmSha1,
+			ChecksumSHA1:      aws.String(checksum),
 		})
 
 		if err != nil {
