@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"context"
 	"fmt"
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
@@ -395,7 +396,13 @@ func TestRun(t *testing.T) {
 
 	// Initialize uploader
 	uploader := &uploadfakes.FakeUploader{}
-	uploader.UploadFileReturns(nil)
+	uploader.UploadFileStub = func(ctx context.Context, file string, key string) error {
+		if file == hostname+"/3.html" {
+			return fmt.Errorf("error uploading")
+		} else {
+			return nil
+		}
+	}
 
 	// Create a Crawler instance
 	cr, err := NewCrawler(cfg, m, uploader)
@@ -480,5 +487,13 @@ func TestRun(t *testing.T) {
 		for _, testPath := range files {
 			assert.Contains(t, uploadedPaths, testPath)
 		}
+	})
+
+	t.Run("correct file uploaded counter metric", func(t *testing.T) {
+		assert.Equal(t, float64(len(tests)-1), testutil.ToFloat64(m.FileUploadCounter()))
+	})
+
+	t.Run("correct file upload failures counter metric", func(t *testing.T) {
+		assert.Equal(t, float64(1), testutil.ToFloat64(m.FileUploadFailuresCounter()))
 	})
 }
