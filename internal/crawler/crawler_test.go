@@ -6,6 +6,7 @@ import (
 	"mirrorer/internal/file"
 	"mirrorer/internal/metrics"
 	"mirrorer/internal/mime"
+	"mirrorer/internal/upload/uploadfakes"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -259,7 +260,7 @@ func TestNewCrawler(t *testing.T) {
 	m := metrics.NewMetrics(reg)
 
 	// Create Crawler instance
-	cr, err := NewCrawler(cfg, m)
+	cr, err := NewCrawler(cfg, m, nil)
 
 	// Assertions on Crawler instances
 	assert.Nil(t, err)
@@ -390,8 +391,12 @@ func TestRun(t *testing.T) {
 	// Initialize metrics
 	m := metrics.NewMetrics(reg)
 
+	// Initialize uploader
+	uploader := &uploadfakes.FakeUploader{}
+	uploader.UploadFileReturns(nil)
+
 	// Create a Crawler instance
-	cr, err := NewCrawler(cfg, m)
+	cr, err := NewCrawler(cfg, m, uploader)
 	assert.NoError(t, err)
 
 	defer func() {
@@ -456,5 +461,22 @@ func TestRun(t *testing.T) {
 		assert.Less(t, slices.Index(sites_visited, "/"), slices.Index(sites_visited, "/1"))
 		assert.Less(t, slices.Index(sites_visited, "/1"), slices.Index(sites_visited, "/500"))
 		assert.Less(t, slices.Index(sites_visited, "/500"), slices.Index(sites_visited, "/3"))
+	})
+
+	t.Run("each file has been uploaded", func(t *testing.T) {
+		files, err := listFiles(hostname)
+		assert.NoError(t, err)
+
+		assert.Equal(t, len(tests), uploader.UploadFileCallCount())
+
+		var uploadedPaths []string
+		for i := 0; i < uploader.UploadFileCallCount(); i++ {
+			_, path, _ := uploader.UploadFileArgsForCall(i)
+			uploadedPaths = append(uploadedPaths, path)
+		}
+
+		for _, testPath := range files {
+			assert.Contains(t, uploadedPaths, testPath)
+		}
 	})
 }
