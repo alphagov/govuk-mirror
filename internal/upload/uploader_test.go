@@ -1,6 +1,7 @@
 package upload
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"mirrorer/internal/aws_client_mocks"
 	"os"
@@ -156,5 +157,36 @@ func TestS3Uploader(t *testing.T) {
 		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key")
 
 		assert.ErrorIs(t, err, expectedError)
+	})
+
+	t.Run("when uploading a file, the SHA1 checksum is provided", func(t *testing.T) {
+		files := map[string]string{
+			"a_file": "some content",
+		}
+		tmpDir := setupFixtures(t, files)
+		defer teardownFixtures(t, tmpDir)
+
+		hasher := sha1.New()
+		hasher.Write([]byte(files["a_file"]))
+		checksum := fmt.Sprintf("%x", hasher.Sum(nil))
+
+		s3Client = &aws_client_mocks.FakeS3ObjectUploadingAPI{}
+		uploader := NewUploader(s3Client, "test-bucket")
+
+		s3Client.HeadObjectReturns(nil, &types.NotFound{})
+		s3Client.PutObjectReturns(&s3.PutObjectOutput{
+			Size:         aws.Int64(int64(len(files["a_file"]))),
+			ChecksumSHA1: aws.String(checksum),
+		}, nil)
+
+		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key")
+		assert.NoError(t, err)
+
+		assert.Equal(t, 1, s3Client.PutObjectCallCount())
+
+		_, args, _ := s3Client.PutObjectArgsForCall(0)
+
+		assert.Equal(t, types.ChecksumAlgorithmSha1, args.ChecksumAlgorithm)
+		assert.Equal(t, aws.String(checksum), args.ChecksumSHA1)
 	})
 }
