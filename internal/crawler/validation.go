@@ -20,6 +20,10 @@ func ValidateCrawlerConfig(cfg *config.Config, timeout time.Duration) error {
 		}
 	}
 
+	if strings.TrimSpace(cfg.MirrorS3BucketName) == "" {
+		return &S3BucketNameMissingError{}
+	}
+
 	// Check all allowed domains
 	for _, domain := range cfg.AllowedDomains {
 		// Skip validation for asset domains that don't serve content at root
@@ -44,6 +48,10 @@ type DomainNotAccessibleError struct {
 func (e *DomainNotAccessibleError) Error() string {
 	return fmt.Sprintf("domain not accessible: %s", e.Domain)
 }
+
+type S3BucketNameMissingError struct{}
+
+func (e *S3BucketNameMissingError) Error() string { return "S3 bucket name is missing" }
 
 // isDomainAccessibleWithConfig checks if a domain responds using the same config as Colly
 func isDomainAccessibleWithConfig(testURL string, cfg *config.Config, timeout time.Duration) bool {

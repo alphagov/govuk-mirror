@@ -250,7 +250,8 @@ func TestNewCrawler(t *testing.T) {
 		DisallowedURLFilters: []*regexp.Regexp{
 			regexp.MustCompile(".*disallowed.*"),
 		},
-		Async: false,
+		Async:              false,
+		MirrorS3BucketName: "s3-bucket-name",
 	}
 
 	// Create a registry
@@ -383,6 +384,7 @@ func TestRun(t *testing.T) {
 		DisallowedURLFilters: []*regexp.Regexp{
 			regexp.MustCompile("/disallowed"),
 		},
+		MirrorS3BucketName: "s3-bucket-name",
 	}
 
 	// Create a registry
