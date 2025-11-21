@@ -28,6 +28,7 @@ func TestNewConfig(t *testing.T) {
 				MirrorAvailabilityUrl: "",
 				Backends:              nil,
 				RefreshInterval:       4 * time.Hour,
+				PushGatewayUrl:        "http://localhost:9091",
 			},
 		},
 		{
@@ -47,6 +48,7 @@ func TestNewConfig(t *testing.T) {
 				"MIRROR_FRESHNESS_URL":    "http://example.com/freshness",
 				"BACKENDS":                "backend1,backend2",
 				"REFRESH_INTERVAL":        "30m",
+				"PUSHGATEWAY_URL":         "http://pushgateway.test",
 			},
 			expected: &Config{
 				Site:           "example.com",
@@ -71,6 +73,7 @@ func TestNewConfig(t *testing.T) {
 				MirrorAvailabilityUrl: "http://example.com/availability",
 				Backends:              []string{"backend1", "backend2"},
 				RefreshInterval:       30 * time.Minute,
+				PushGatewayUrl:        "http://pushgateway.test",
 			},
 		},
 	}
