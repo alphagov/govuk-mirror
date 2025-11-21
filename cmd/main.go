@@ -45,8 +45,6 @@ func main() {
 	checkError(err, "Error creating new crawler")
 
 	// Go routine to update mirror metrics
-	//   This routine will run forever getting updates from the mirror
-	//   and pushing metrics at the configured interval set by REFRESH_INTERVAL env var
 	go func(ctx context.Context, cfg *config.Config) {
 		mirrorReg := prometheus.NewRegistry()
 		mirrorMetrics := metrics.NewMirrorMetrics(mirrorReg)

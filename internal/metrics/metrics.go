@@ -188,7 +188,9 @@ func updateMirrorResponseStatusCode(m *Metrics, url string, backend string) erro
 }
 
 func UpdateMirrorMetrics(m *Metrics, cfg *config.Config, reg *prometheus.Registry, ctx context.Context) {
-	for {
+	// only run for up to 24 hours as next mirror job will then start
+	// eg default of 4 hour interval means running for 20 hours with 5 iterations before next job starts
+	for range time.Hour*24/cfg.RefreshInterval - 1 {
 		for _, backend := range cfg.Backends {
 			err := updateMirrorLastUpdatedGauge(m, cfg.MirrorFreshnessUrl, backend)
 			if err != nil {
