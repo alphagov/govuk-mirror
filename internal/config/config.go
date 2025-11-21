@@ -23,6 +23,7 @@ type Config struct {
 	MirrorAvailabilityUrl string            `env:"MIRROR_AVAILABILITY_URL"`
 	Backends              []string          `env:"BACKENDS" envSeparator:","`
 	RefreshInterval       time.Duration     `env:"REFRESH_INTERVAL" envDefault:"4h"`
+	PushGatewayUrl        string            `env:"PUSHGATEWAY_URL" envDefault:"http://localhost:9091"`
 }
 
 func NewConfig() (*Config, error) {
