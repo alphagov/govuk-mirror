@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"context"
 	"mirrorer/internal/config"
 	"net/http"
 	"net/http/httptest"
@@ -71,7 +72,7 @@ func TestCrawlerDurationGaugeMetric(t *testing.T) {
 
 func setup() (*Metrics, *config.Config) {
 	reg := prometheus.NewRegistry()
-	m := NewMetrics(reg)
+	m := NewMirrorMetrics(reg)
 	cfg := &config.Config{
 		MirrorFreshnessUrl:    "http://mirror.test/freshness",
 		MirrorAvailabilityUrl: "http://mirror.test/availability",
@@ -94,6 +95,12 @@ func createTestServer(lastModified time.Time, statusCode int) *httptest.Server {
 		} else {
 			http.Error(w, "Backend-Override header not set to backend1 or backend2", http.StatusBadRequest)
 		}
+	}))
+}
+
+func createTestPushGateway() *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
 	}))
 }
 
@@ -148,10 +155,15 @@ func TestUpdateMetrics(t *testing.T) {
 	ts := createTestServer(timestamp, http.StatusOK)
 	defer ts.Close()
 
+	pushGateway := createTestPushGateway()
+	defer pushGateway.Close()
+
 	cfg.MirrorFreshnessUrl = ts.URL
 	cfg.MirrorAvailabilityUrl = ts.URL
-
-	go UpdateMetrics(m, cfg)
+	cfg.MetricRefreshInterval = 1 * time.Second
+	cfg.PushGatewayUrl = pushGateway.URL
+	reg := prometheus.NewRegistry()
+	go UpdateMirrorMetrics(m, cfg, reg, context.Background())
 
 	time.Sleep(2 * time.Second)
 

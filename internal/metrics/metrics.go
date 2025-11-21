@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"mirrorer/internal/config"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -47,6 +46,19 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 			Name: "crawler_duration_minutes",
 			Help: "Duration of crawler in minutes",
 		}),
+	}
+
+	reg.MustRegister(m.httpErrorCounter)
+	reg.MustRegister(m.downloadErrorCounter)
+	reg.MustRegister(m.downloadCounter)
+	reg.MustRegister(m.crawledPagesCounter)
+	reg.MustRegister(m.crawlerDuration)
+
+	return m
+}
+
+func NewMirrorMetrics(reg *prometheus.Registry) *Metrics {
+	m := &Metrics{
 		mirrorLastUpdatedGauge: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "govuk_mirror_last_updated_time",
 			Help: "Last time the mirror was updated",
@@ -57,11 +69,6 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 		}, []string{"backend"}),
 	}
 
-	reg.MustRegister(m.httpErrorCounter)
-	reg.MustRegister(m.downloadErrorCounter)
-	reg.MustRegister(m.downloadCounter)
-	reg.MustRegister(m.crawledPagesCounter)
-	reg.MustRegister(m.crawlerDuration)
 	reg.MustRegister(m.mirrorLastUpdatedGauge)
 	reg.MustRegister(m.mirrorResponseStatusCode)
 
@@ -108,6 +115,15 @@ func (m Metrics) CrawlerDuration() prometheus.Gauge {
 	return m.crawlerDuration
 }
 
+func closeResponse(resp *http.Response) {
+	if resp != nil && resp.Body != nil {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Error().Err(err).Msg("Error closing response body")
+		}
+	}
+}
+
 func fetchMirrorAvailabilityMetric(backend string, url string) (httpStatus int, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -119,6 +135,7 @@ func fetchMirrorAvailabilityMetric(backend string, url string) (httpStatus int, 
 	if err != nil {
 		return
 	}
+	defer closeResponse(resp)
 
 	return resp.StatusCode, nil
 }
@@ -134,6 +151,7 @@ func fetchMirrorFreshnessMetric(backend string, url string) (seconds float64, er
 	if err != nil {
 		return
 	}
+	defer closeResponse(resp)
 
 	if resp.StatusCode != http.StatusOK {
 		return -1, fmt.Errorf("request failed with status code: %s", resp.Status)
@@ -169,7 +187,7 @@ func updateMirrorResponseStatusCode(m *Metrics, url string, backend string) erro
 	return nil
 }
 
-func UpdateMetrics(m *Metrics, cfg *config.Config) {
+func UpdateMirrorMetrics(m *Metrics, cfg *config.Config, reg *prometheus.Registry, ctx context.Context) {
 	for {
 		for _, backend := range cfg.Backends {
 			err := updateMirrorLastUpdatedGauge(m, cfg.MirrorFreshnessUrl, backend)
@@ -182,19 +200,20 @@ func UpdateMetrics(m *Metrics, cfg *config.Config) {
 				log.Error().Str("metric", "govuk_mirror_response_status_code").Str("backend", backend).Err(err).Msg("Error updating metrics")
 			}
 		}
+		PushMetrics(reg, ctx, cfg)
 		time.Sleep(cfg.RefreshInterval)
 	}
 }
 
-func PushMetrics(reg *prometheus.Registry, ctx context.Context, t time.Duration) {
-	ticker := time.NewTicker(t)
+func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Config) {
+	ticker := time.NewTicker(cfg.MetricRefreshInterval)
 
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			err := push.New(os.Getenv("PROMETHEUS_PUSHGATEWAY_URL"), "mirror_metrics").Gatherer(reg).Push()
+			err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
 
 			if err != nil {
 				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
