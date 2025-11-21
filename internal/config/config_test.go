@@ -29,7 +29,7 @@ func TestNewConfig(t *testing.T) {
 				MirrorAvailabilityUrl: "",
 				Backends:              nil,
 				RefreshInterval:       4 * time.Hour,
-				PushGatewayUrl:        "http://localhost:9091",
+				PushGatewayUrl:        "",
 			},
 		},
 		{
