@@ -97,6 +97,8 @@ func (cr *Crawler) Run(m *metrics.Metrics) {
 
 	startTime := time.Now()
 
+	defer metrics.CrawlerDuration(m, startTime)
+
 	// Start the crawler
 	err := cr.collector.Visit(cr.cfg.Site)
 	if err != nil {
@@ -104,8 +106,6 @@ func (cr *Crawler) Run(m *metrics.Metrics) {
 	}
 
 	cr.collector.Wait()
-
-	metrics.CrawlerDuration(m, startTime)
 }
 
 func redirectHandler(m *metrics.Metrics) func(req *http.Request, via []*http.Request) error {
