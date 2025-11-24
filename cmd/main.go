@@ -7,9 +7,12 @@ import (
 	"mirrorer/internal/logger"
 	"mirrorer/internal/metrics"
 	"mirrorer/internal/mime"
+	"mirrorer/internal/upload"
 	"sync"
 	"time"
 
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 )
@@ -41,7 +44,13 @@ func main() {
 		checkError(err, "Configuration validation failed")
 	}
 
-	cr, err := crawler.NewCrawler(cfg, prometheusMetrics)
+	awsCfg, err := awsConfig.LoadDefaultConfig(context.Background())
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to load AWS config")
+	}
+	s3Client := s3.NewFromConfig(awsCfg)
+
+	cr, err := crawler.NewCrawler(cfg, prometheusMetrics, upload.NewUploader(s3Client, cfg.MirrorS3BucketName))
 	checkError(err, "Error creating new crawler")
 
 	// Go routine to send metrics to Prometheus Pushgateway

@@ -1,4 +1,12 @@
-test: lint unit_tests
+defaults: build
+
+generate:
+	go generate ./...
+
+build: generate
+	go build ./cmd/...
+
+test: generate lint unit_tests
 
 lint:
 	@if ! command -v golangci-lint; then \

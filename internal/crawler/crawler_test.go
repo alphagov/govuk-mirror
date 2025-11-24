@@ -1,11 +1,13 @@
 package crawler
 
 import (
+	"context"
 	"fmt"
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
 	"mirrorer/internal/metrics"
 	"mirrorer/internal/mime"
+	"mirrorer/internal/upload/uploadfakes"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -249,7 +251,8 @@ func TestNewCrawler(t *testing.T) {
 		DisallowedURLFilters: []*regexp.Regexp{
 			regexp.MustCompile(".*disallowed.*"),
 		},
-		Async: false,
+		Async:              false,
+		MirrorS3BucketName: "s3-bucket-name",
 	}
 
 	// Create a registry
@@ -259,7 +262,7 @@ func TestNewCrawler(t *testing.T) {
 	m := metrics.NewMetrics(reg)
 
 	// Create Crawler instance
-	cr, err := NewCrawler(cfg, m)
+	cr, err := NewCrawler(cfg, m, nil)
 
 	// Assertions on Crawler instances
 	assert.Nil(t, err)
@@ -382,6 +385,7 @@ func TestRun(t *testing.T) {
 		DisallowedURLFilters: []*regexp.Regexp{
 			regexp.MustCompile("/disallowed"),
 		},
+		MirrorS3BucketName: "s3-bucket-name",
 	}
 
 	// Create a registry
@@ -390,8 +394,18 @@ func TestRun(t *testing.T) {
 	// Initialize metrics
 	m := metrics.NewMetrics(reg)
 
+	// Initialize uploader
+	uploader := &uploadfakes.FakeUploader{}
+	uploader.UploadFileStub = func(ctx context.Context, file string, key string) error {
+		if file == hostname+"/3.html" {
+			return fmt.Errorf("error uploading")
+		} else {
+			return nil
+		}
+	}
+
 	// Create a Crawler instance
-	cr, err := NewCrawler(cfg, m)
+	cr, err := NewCrawler(cfg, m, uploader)
 	assert.NoError(t, err)
 
 	defer func() {
@@ -456,5 +470,30 @@ func TestRun(t *testing.T) {
 		assert.Less(t, slices.Index(sites_visited, "/"), slices.Index(sites_visited, "/1"))
 		assert.Less(t, slices.Index(sites_visited, "/1"), slices.Index(sites_visited, "/500"))
 		assert.Less(t, slices.Index(sites_visited, "/500"), slices.Index(sites_visited, "/3"))
+	})
+
+	t.Run("each file has been uploaded", func(t *testing.T) {
+		files, err := listFiles(hostname)
+		assert.NoError(t, err)
+
+		assert.Equal(t, len(tests), uploader.UploadFileCallCount())
+
+		var uploadedPaths []string
+		for i := 0; i < uploader.UploadFileCallCount(); i++ {
+			_, path, _ := uploader.UploadFileArgsForCall(i)
+			uploadedPaths = append(uploadedPaths, path)
+		}
+
+		for _, testPath := range files {
+			assert.Contains(t, uploadedPaths, testPath)
+		}
+	})
+
+	t.Run("correct file uploaded counter metric", func(t *testing.T) {
+		assert.Equal(t, float64(len(tests)-1), testutil.ToFloat64(m.FileUploadCounter()))
+	})
+
+	t.Run("correct file upload failures counter metric", func(t *testing.T) {
+		assert.Equal(t, float64(1), testutil.ToFloat64(m.FileUploadFailuresCounter()))
 	})
 }

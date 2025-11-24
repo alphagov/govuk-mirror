@@ -1,12 +1,15 @@
 package crawler
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"mime"
 	"mirrorer/internal/client"
 	"mirrorer/internal/config"
 	"mirrorer/internal/file"
 	"mirrorer/internal/metrics"
+	"mirrorer/internal/upload"
 	"net/http"
 	"slices"
 	"strings"
@@ -35,8 +38,8 @@ type Crawler struct {
 	collector *colly.Collector
 }
 
-func NewCrawler(cfg *config.Config, m *metrics.Metrics) (*Crawler, error) {
-	collector, err := newCollector(cfg, m)
+func NewCrawler(cfg *config.Config, m *metrics.Metrics, uploader upload.Uploader) (*Crawler, error) {
+	collector, err := newCollector(cfg, m, uploader)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +47,7 @@ func NewCrawler(cfg *config.Config, m *metrics.Metrics) (*Crawler, error) {
 	return &Crawler{cfg: cfg, collector: collector}, nil
 }
 
-func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, error) {
+func newCollector(cfg *config.Config, m *metrics.Metrics, uploader upload.Uploader) (*colly.Collector, error) {
 	c := colly.NewCollector(
 		colly.UserAgent(cfg.UserAgent),
 		colly.AllowedDomains(cfg.AllowedDomains...),
@@ -60,7 +63,7 @@ func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, err
 		isScraping:      false,
 	}
 
-	client := client.NewClient(c, redirectHandler(m))
+	client := client.NewClient(c, redirectHandler(c.Context, m, uploader))
 	c.SetClient(client)
 
 	err := c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: cfg.Concurrency})
@@ -78,7 +81,7 @@ func newCollector(cfg *config.Config, m *metrics.Metrics) (*colly.Collector, err
 	c.OnError(errorHandler(m))
 
 	// Save successful responses to disk
-	c.OnResponse(responseHandler(m))
+	c.OnResponse(responseHandler(c.Context, m, uploader))
 
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler())
@@ -108,7 +111,7 @@ func (cr *Crawler) Run(m *metrics.Metrics) {
 	cr.collector.Wait()
 }
 
-func redirectHandler(m *metrics.Metrics) func(req *http.Request, via []*http.Request) error {
+func redirectHandler(ctx context.Context, m *metrics.Metrics, uploader upload.Uploader) func(req *http.Request, via []*http.Request) error {
 	return func(req *http.Request, via []*http.Request) error {
 		for _, redirectReq := range via {
 			body := file.RedirectHTMLBody(req.URL.String())
@@ -119,8 +122,22 @@ func redirectHandler(m *metrics.Metrics) func(req *http.Request, via []*http.Req
 				log.Error().Err(err).Str("crawled_url", redirectReq.URL.String()).Str("redirect_url", req.URL.String()).Msg("Error downloading redirect URL to disk")
 				return err
 			}
+
 			metrics.DownloadCounter(m)
 			log.Info().Str("crawled_url", redirectReq.URL.String()).Str("redirect_url", req.URL.String()).Msg("Downloaded redirect URL to disk")
+
+			path, err := file.GenerateFilePath(redirectReq.URL, "text/html")
+			if err != nil {
+				log.Error().Err(err).Msg(fmt.Sprintf("Error generating file path for %s", redirectReq.URL.String()))
+			}
+
+			err = uploader.UploadFile(ctx, path, path)
+			if err != nil {
+				log.Error().Err(err).Msg(fmt.Sprintf("Error uploading %s", path))
+				metrics.FileUploadFailed(m)
+			} else {
+				metrics.FileUploaded(m)
+			}
 		}
 		return nil
 	}
@@ -190,7 +207,7 @@ func scrapeHandler(crawlState *CrawlState) func(*colly.Response) {
 	}
 }
 
-func responseHandler(m *metrics.Metrics) func(*colly.Response) {
+func responseHandler(ctx context.Context, m *metrics.Metrics, uploader upload.Uploader) func(*colly.Response) {
 	return func(r *colly.Response) {
 
 		contentType := r.Headers.Get("Content-Type")
@@ -229,6 +246,19 @@ func responseHandler(m *metrics.Metrics) func(*colly.Response) {
 		} else {
 			metrics.DownloadCounter(m)
 			log.Info().Str("crawled_url", r.Request.URL.String()).Str("type", mediaType).Msg("Downloaded file")
+
+			path, err := file.GenerateFilePath(r.Request.URL, contentType)
+			if err != nil {
+				log.Error().Err(err).Msg(fmt.Sprintf("Error generating file path for %s", r.Request.URL.String()))
+			}
+
+			err = uploader.UploadFile(ctx, path, path)
+			if err != nil {
+				log.Error().Err(err).Msg(fmt.Sprintf("Error uploading %s", path))
+				metrics.FileUploadFailed(m)
+			} else {
+				metrics.FileUploaded(m)
+			}
 		}
 	}
 }

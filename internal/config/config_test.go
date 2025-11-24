@@ -24,6 +24,7 @@ func TestNewConfig(t *testing.T) {
 				SkipValidation:        false,
 				MetricRefreshInterval: 10 * time.Second,
 				Async:                 true,
+				MirrorS3BucketName:    "",
 			},
 		},
 		{
@@ -39,6 +40,7 @@ func TestNewConfig(t *testing.T) {
 				"SKIP_VALIDATION":         "true",
 				"METRIC_REFRESH_INTERVAL": "10s",
 				"ASYNC":                   "true",
+				"S3_BUCKET_NAME":          "s3-bucket-name",
 			},
 			expected: &Config{
 				Site:           "example.com",
@@ -59,6 +61,7 @@ func TestNewConfig(t *testing.T) {
 				SkipValidation:        true,
 				MetricRefreshInterval: 10 * time.Second,
 				Async:                 true,
+				MirrorS3BucketName:    "s3-bucket-name",
 			},
 		},
 	}
