@@ -2,6 +2,9 @@ package metrics
 
 import (
 	"testing"
+	"time"
+
+	"testing/synctest"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -46,4 +49,19 @@ func TestIncrementCrawledPagesCounterMetric(t *testing.T) {
 	CrawledPagesCounter(m)
 
 	assert.Equal(t, float64(3), testutil.ToFloat64(m.CrawledPagesCounter()))
+}
+
+func TestCrawlerDurationGaugeMetric(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		reg := prometheus.NewRegistry()
+		m := NewMetrics(reg)
+
+		startTime := time.Now()
+
+		// Pass 10 'fake' minutes
+		time.Sleep(10 * time.Minute)
+		CrawlerDuration(m, startTime)
+
+		assert.Equal(t, float64(10), testutil.ToFloat64(m.CrawlerDuration()))
+	})
 }
