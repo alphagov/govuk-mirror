@@ -43,6 +43,10 @@ Mirror pushes the following metrics to Prometheus Pushgateway:
 | `govuk_mirror_last_updated_time` | A unix timestamp representing the Last-Modified header of the page referenced by the MIRROR_FRESHNESS_URL. Has the label backend for each backend override being used. |
 | `govuk_mirror_response_status_code` | An HTTP status code representing the response status of the page referenced by the MIRROR_AVAILABILITY_URL. Has the label backend for each backend override being used. |
 
+## Running tests locally
+
+Run `make test` to build the project and run all the tests or `make build` to just build the projects dependencies and then run a specific test, for example `go test -v ./internal/config`.
+
 ### View metrics locally
 
 1. Start up Prometheus Pushgateway
