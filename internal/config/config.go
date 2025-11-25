@@ -21,10 +21,8 @@ type Config struct {
 	Async                 bool              `env:"ASYNC" envDefault:"true"`
 	MirrorS3BucketName    string            `env:"S3_BUCKET_NAME"`
 	MirrorFreshnessUrl    string            `env:"MIRROR_FRESHNESS_URL"`
-	MirrorAvailabilityUrl string            `env:"MIRROR_AVAILABILITY_URL"`
 	Backends              []string          `env:"BACKENDS" envSeparator:","`
-	RefreshInterval       time.Duration     `env:"REFRESH_INTERVAL" envDefault:"4h"`
-	PushGatewayUrl        string            `env:"PUSHGATEWAY_URL"`
+	PushGatewayUrl        string            `env:"PROMETHEUS_PUSHGATEWAY_URL"`
 }
 
 func NewConfig() (*Config, error) {

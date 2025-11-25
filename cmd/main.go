@@ -53,13 +53,6 @@ func main() {
 	cr, err := crawler.NewCrawler(cfg, prometheusMetrics, upload.NewUploader(s3Client, cfg.MirrorS3BucketName))
 	checkError(err, "Error creating new crawler")
 
-	// Go routine to update mirror metrics
-	go func(ctx context.Context, cfg *config.Config) {
-		mirrorReg := prometheus.NewRegistry()
-		mirrorMetrics := metrics.NewMirrorMetrics(mirrorReg)
-		metrics.UpdateMirrorMetrics(mirrorMetrics, cfg, mirrorReg, ctx)
-	}(ctx, cfg)
-
 	// Go routine to send metrics to Prometheus Pushgateway
 	wg.Go(func() {
 		metrics.PushMetrics(reg, ctx, cfg)

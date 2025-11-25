@@ -23,7 +23,11 @@ type Metrics struct {
 	fileUploadCounter         prometheus.Counter
 	fileUploadFailuresCounter prometheus.Counter
 	mirrorLastUpdatedGauge    *prometheus.GaugeVec
-	mirrorResponseStatusCode  *prometheus.GaugeVec
+}
+
+type MirrorLastUpdatedState struct {
+	MirrorFreshnessUrl string
+	Backends           []string
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
@@ -75,14 +79,9 @@ func NewMirrorMetrics(reg *prometheus.Registry) *Metrics {
 			Name: "govuk_mirror_last_updated_time",
 			Help: "Last time the mirror was updated",
 		}, []string{"backend"}),
-		mirrorResponseStatusCode: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "govuk_mirror_response_status_code",
-			Help: "Response status code for the MIRROR_AVAILABILITY_URL probe",
-		}, []string{"backend"}),
 	}
 
 	reg.MustRegister(m.mirrorLastUpdatedGauge)
-	reg.MustRegister(m.mirrorResponseStatusCode)
 
 	return m
 }
@@ -150,22 +149,6 @@ func closeResponse(resp *http.Response) {
 	}
 }
 
-func fetchMirrorAvailabilityMetric(backend string, url string) (httpStatus int, err error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return
-	}
-	req.Header.Set("Backend-Override", backend)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer closeResponse(resp)
-
-	return resp.StatusCode, nil
-}
-
 func fetchMirrorFreshnessMetric(backend string, url string) (seconds float64, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -193,7 +176,7 @@ func fetchMirrorFreshnessMetric(backend string, url string) (seconds float64, er
 	return float64(t.Unix()), nil
 }
 
-func updateMirrorLastUpdatedGauge(m *Metrics, url string, backend string) error {
+func UpdateMirrorLastUpdatedGauge(m *Metrics, url string, backend string) error {
 	freshness, err := fetchMirrorFreshnessMetric(backend, url)
 	if err != nil {
 		return err
@@ -201,36 +184,6 @@ func updateMirrorLastUpdatedGauge(m *Metrics, url string, backend string) error 
 
 	m.mirrorLastUpdatedGauge.With(prometheus.Labels{"backend": backend}).Set(freshness)
 	return nil
-}
-
-func updateMirrorResponseStatusCode(m *Metrics, url string, backend string) error {
-	statusCode, err := fetchMirrorAvailabilityMetric(backend, url)
-	if err != nil {
-		return err
-	}
-
-	m.mirrorResponseStatusCode.With(prometheus.Labels{"backend": backend}).Set(float64(statusCode))
-	return nil
-}
-
-func UpdateMirrorMetrics(m *Metrics, cfg *config.Config, reg *prometheus.Registry, ctx context.Context) {
-	// only run for up to 24 hours as next mirror job will then start
-	// eg default of 4 hour interval means running for 20 hours with 5 iterations before next job starts
-	for range time.Hour*24/cfg.RefreshInterval - 1 {
-		for _, backend := range cfg.Backends {
-			err := updateMirrorLastUpdatedGauge(m, cfg.MirrorFreshnessUrl, backend)
-			if err != nil {
-				log.Error().Str("metric", "govuk_mirror_last_updated_time").Str("backend", backend).Err(err).Msg("Error updating metrics")
-			}
-
-			err = updateMirrorResponseStatusCode(m, cfg.MirrorAvailabilityUrl, backend)
-			if err != nil {
-				log.Error().Str("metric", "govuk_mirror_response_status_code").Str("backend", backend).Err(err).Msg("Error updating metrics")
-			}
-		}
-		PushMetrics(reg, ctx, cfg)
-		time.Sleep(cfg.RefreshInterval)
-	}
 }
 
 func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Config) {
