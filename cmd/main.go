@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"mirrorer/internal/config"
 	"mirrorer/internal/crawler"
 	"mirrorer/internal/logger"
@@ -22,6 +23,7 @@ func main() {
 
 	// Create waitGroup
 	var wg sync.WaitGroup
+	var wgMirrorMetrics sync.WaitGroup
 
 	// Create context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -44,13 +46,6 @@ func main() {
 	cr, err := crawler.NewCrawler(cfg, prometheusMetrics)
 	checkError(err, "Error creating new crawler")
 
-	// Go routine to update mirror metrics
-	go func(ctx context.Context, cfg *config.Config) {
-		mirrorReg := prometheus.NewRegistry()
-		mirrorMetrics := metrics.NewMirrorMetrics(mirrorReg)
-		metrics.UpdateMirrorMetrics(mirrorMetrics, cfg, mirrorReg, ctx)
-	}(ctx, cfg)
-
 	// Go routine to send metrics to Prometheus Pushgateway
 	wg.Go(func() {
 		metrics.PushMetrics(reg, ctx, cfg)
@@ -59,7 +54,18 @@ func main() {
 	// Run crawler
 	cr.Run(prometheusMetrics)
 
+	// Go routine to update mirror metrics
+	wgMirrorMetrics.Go(func() {
+		wgMirrorMetrics.Add(1)
+		fmt.Printf("REFRESH_INTERVAL %+v\n", cfg.RefreshInterval)
+		mirrorMetrics := metrics.NewMirrorMetrics(reg)
+		metrics.UpdateMirrorMetrics(mirrorMetrics, cfg, reg, ctx)
+	})
+
+	wgMirrorMetrics.Wait()
+
 	// Signal PushMetrics goroutine to gracefully shutdown
+	// TODO: wait for mirror metrics job to complete
 	cancel()
 
 	// Wait for PushMetrics goroutine to gracefully shutdown

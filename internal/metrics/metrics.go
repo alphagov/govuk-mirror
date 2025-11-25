@@ -15,11 +15,14 @@ import (
 var httpClient = &http.Client{}
 
 type Metrics struct {
-	httpErrorCounter         prometheus.Counter
-	downloadErrorCounter     prometheus.Counter
-	downloadCounter          prometheus.Counter
-	crawledPagesCounter      prometheus.Counter
-	crawlerDuration          prometheus.Gauge
+	httpErrorCounter     prometheus.Counter
+	downloadErrorCounter prometheus.Counter
+	downloadCounter      prometheus.Counter
+	crawledPagesCounter  prometheus.Counter
+	crawlerDuration      prometheus.Gauge
+}
+
+type MirrorMetrics struct {
 	mirrorLastUpdatedGauge   *prometheus.GaugeVec
 	mirrorResponseStatusCode *prometheus.GaugeVec
 }
@@ -57,8 +60,8 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 	return m
 }
 
-func NewMirrorMetrics(reg *prometheus.Registry) *Metrics {
-	m := &Metrics{
+func NewMirrorMetrics(reg *prometheus.Registry) *MirrorMetrics {
+	m := &MirrorMetrics{
 		mirrorLastUpdatedGauge: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "govuk_mirror_last_updated_time",
 			Help: "Last time the mirror was updated",
@@ -167,30 +170,46 @@ func fetchMirrorFreshnessMetric(backend string, url string) (seconds float64, er
 	return float64(t.Unix()), nil
 }
 
-func updateMirrorLastUpdatedGauge(m *Metrics, url string, backend string) error {
+// func getMirrorLastUpdated(last_update_chan chan float64, url string, backend string) {
+// 	freshness, err := fetchMirrorFreshnessMetric(backend, url)
+// 	if err != nil {
+// 		return -1, err
+// 	}
+// 	last_update_chan <- freshness
+
+// 	return freshness, nil
+// }
+
+func updateMirrorLastUpdatedGauge(m *MirrorMetrics, url string, backend string) error {
 	freshness, err := fetchMirrorFreshnessMetric(backend, url)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Freshness %+v\n", freshness)
 
 	m.mirrorLastUpdatedGauge.With(prometheus.Labels{"backend": backend}).Set(freshness)
 	return nil
 }
 
-func updateMirrorResponseStatusCode(m *Metrics, url string, backend string) error {
+func updateMirrorResponseStatusCode(m *MirrorMetrics, url string, backend string) error {
 	statusCode, err := fetchMirrorAvailabilityMetric(backend, url)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Status Code %+v\n", statusCode)
 
 	m.mirrorResponseStatusCode.With(prometheus.Labels{"backend": backend}).Set(float64(statusCode))
 	return nil
 }
 
-func UpdateMirrorMetrics(m *Metrics, cfg *config.Config, reg *prometheus.Registry, ctx context.Context) {
+func UpdateMirrorMetrics(m *MirrorMetrics, cfg *config.Config, reg *prometheus.Registry, ctx context.Context) {
 	// only run for up to 24 hours as next mirror job will then start
 	// eg default of 4 hour interval means running for 20 hours with 5 iterations before next job starts
-	for range time.Hour*24/cfg.RefreshInterval - 1 {
+	// for range time.Hour*24/cfg.RefreshInterval - 1 {
+	var index = 0
+	for range time.Second*30/cfg.RefreshInterval - 1 {
+		index += 1
+		fmt.Printf("Index: %+v\n", index)
 		for _, backend := range cfg.Backends {
 			err := updateMirrorLastUpdatedGauge(m, cfg.MirrorFreshnessUrl, backend)
 			if err != nil {
@@ -202,7 +221,8 @@ func UpdateMirrorMetrics(m *Metrics, cfg *config.Config, reg *prometheus.Registr
 				log.Error().Str("metric", "govuk_mirror_response_status_code").Str("backend", backend).Err(err).Msg("Error updating metrics")
 			}
 		}
-		PushMetrics(reg, ctx, cfg)
+		fmt.Printf("Pushing mirror metrics")
+		PushMirrorMetrics(reg, ctx, cfg)
 		time.Sleep(cfg.RefreshInterval)
 	}
 }
@@ -216,7 +236,7 @@ func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Conf
 		select {
 		case <-ticker.C:
 			err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
-
+			fmt.Printf("URL: %+v", cfg.PushGatewayUrl)
 			if err != nil {
 				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
 			}
@@ -225,5 +245,13 @@ func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Conf
 			log.Info().Msg("PushMetrics goroutine is shutting down...")
 			return
 		}
+	}
+}
+
+func PushMirrorMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Config) {
+	err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
+	fmt.Printf("URL: %+v", cfg.PushGatewayUrl)
+	if err != nil {
+		log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
 	}
 }
