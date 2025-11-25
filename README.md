@@ -31,9 +31,11 @@ Mirror pushes the following metrics to Prometheus Pushgateway:
 |----------|----------------------|
 | `crawled_pages_total` | Total number of HTTP errors encountered by the crawler |
 | `crawler_errors_total` | Total number of HTTP errors encountered by the crawler |
-| `download_errors_total` | Total number of download errors encountered by the crawler |
-| `download_total` | Total number of files downloaded by the crawler |
+| `crawler_pages_downloaded_errors_total` | Total number of download errors encountered by the crawler |
+| `crawler_pages_downloaded_total` | Total number of files downloaded by the crawler |
 | `crawler_duration_minutes` | Number of minutes taken by the crawler |
+| `files_uploaded_total` | Total number of files the crawler has uploaded to the mirror |
+| `file_upload_failures_total` | Total number of upload failures encounterd by the crawler |
 
 ### View metrics locally
 
