@@ -3,6 +3,7 @@ package upload
 import (
 	"context"
 	"crypto/sha1"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -77,7 +78,7 @@ func (u S3Uploader) UploadFile(ctx context.Context, filePath string, destination
 			return fmt.Errorf("failed to rewind file %s: %w", filePath, err)
 		}
 
-		checksum := fmt.Sprintf("%x", hasher.Sum(nil))
+		checksum := base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 
 		_, err = u.s3.PutObject(ctx, &s3.PutObjectInput{
 			Bucket:            aws.String(u.bucketName),
