@@ -92,7 +92,7 @@ func FileUploadFailed(m *Metrics) {
 	m.fileUploadFailuresCounter.Inc()
 }
 
-func crawlerDuration(m *Metrics, t time.Time) {
+func CrawlerDuration(m *Metrics, t time.Time) {
 	m.crawlerDuration.Set(time.Since(t).Minutes())
 }
 
@@ -132,15 +132,10 @@ func (m Metrics) MirrorLastUpdatedGauge() prometheus.Gauge {
 	return m.mirrorLastUpdatedGauge
 }
 
-func UpdateAndPushEndJobMetrics(m *Metrics, startTime time.Time, cfg *config.Config, reg *prometheus.Registry) {
-	crawlerDuration(m, startTime)
+func UpdateEndJobMetrics(m *Metrics, startTime time.Time, cfg *config.Config) {
+	CrawlerDuration(m, startTime)
 	timeNow := float64(time.Now().Unix())
 	mirrorLastUpdatedGauge(m, timeNow)
-
-	err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
-	if err != nil {
-		log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
-	}
 }
 
 func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Config) {
@@ -158,7 +153,7 @@ func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Conf
 			}
 
 		case <-ctx.Done():
-			err := push.New(os.Getenv("PROMETHEUS_PUSHGATEWAY_URL"), "mirror_metrics").Gatherer(reg).Push()
+			err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
 
 			if err != nil {
 				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")

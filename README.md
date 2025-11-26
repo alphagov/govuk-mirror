@@ -18,7 +18,6 @@ Configuration is handled through environment variables as listed below:
 | `DISALLOWED_URL_RULES` | `/search/.*,/government/.*\.atom` | A comma-separated list of regex patterns matching URLs that the crawler should avoid. |
 | `SKIP_VALIDATION` | `true` | Skip domain accessibility validation before crawling. Useful for offline testing. |
 | `ASYNC` | `true` | Async crawling. Set to false for testing as a race condition could fail the crawler tests. |
-| `BACKENDS` | `mirrorS3,mirrorS3Replica,mirrorGCS` | A comma-separated list of backend overrides to collect metrics for. |
 
 ## Crawling order
 

@@ -17,7 +17,6 @@ import (
 
 	"github.com/antchfx/xmlquery"
 	"github.com/gocolly/colly/v2"
-	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/rs/zerolog/log"
 )
@@ -97,16 +96,9 @@ func newCollector(cfg *config.Config, m *metrics.Metrics, uploader upload.Upload
 	return c, nil
 }
 
-func (cr *Crawler) Run(m *metrics.Metrics, cfg *config.Config, reg *prometheus.Registry) {
+func (cr *Crawler) Run(m *metrics.Metrics, cfg *config.Config) {
 	startTime := time.Now()
-
-	defer func() {
-		metrics.CrawlerDuration(m, startTime)
-		timeNow := float64(time.Now().Unix())
-		for _, backend := range cfg.Backends {
-			metrics.UpdateMirrorLastUpdatedGauge(m, backend, timeNow)
-		}
-	}()
+	defer metrics.UpdateEndJobMetrics(m, startTime, cfg)
 
 	// Start the crawler
 	err := cr.collector.Visit(cr.cfg.Site)

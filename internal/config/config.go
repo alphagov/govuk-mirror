@@ -20,7 +20,6 @@ type Config struct {
 	MetricRefreshInterval time.Duration     `env:"METRIC_REFRESH_INTERVAL" envDefault:"10s"`
 	Async                 bool              `env:"ASYNC" envDefault:"true"`
 	MirrorS3BucketName    string            `env:"S3_BUCKET_NAME"`
-	Backends              []string          `env:"BACKENDS" envSeparator:","`
 	PushGatewayUrl        string            `env:"PROMETHEUS_PUSHGATEWAY_URL"`
 }
 
