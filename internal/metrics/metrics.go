@@ -18,7 +18,7 @@ type Metrics struct {
 	crawlerDuration           prometheus.Gauge
 	fileUploadCounter         prometheus.Counter
 	fileUploadFailuresCounter prometheus.Counter
-	mirrorLastUpdatedGauge    *prometheus.GaugeVec
+	mirrorLastUpdatedGauge    prometheus.Gauge
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
@@ -51,10 +51,10 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 			Name: "file_upload_failures_total",
 			Help: "Total number of upload failures encounterd by the crawler",
 		}),
-		mirrorLastUpdatedGauge: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		mirrorLastUpdatedGauge: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "govuk_mirror_last_updated_time",
 			Help: "Last time the mirror was updated",
-		}, []string{"backend"}),
+		}),
 	}
 
 	reg.MustRegister(m.httpErrorCounter)
@@ -92,8 +92,12 @@ func FileUploadFailed(m *Metrics) {
 	m.fileUploadFailuresCounter.Inc()
 }
 
-func CrawlerDuration(m *Metrics, t time.Time) {
+func crawlerDuration(m *Metrics, t time.Time) {
 	m.crawlerDuration.Set(time.Since(t).Minutes())
+}
+
+func mirrorLastUpdatedGauge(m *Metrics, last_updated_time float64) {
+	m.mirrorLastUpdatedGauge.Set(last_updated_time)
 }
 
 func (m Metrics) HttpErrorCounter() prometheus.Counter {
@@ -115,6 +119,7 @@ func (m Metrics) CrawledPagesCounter() prometheus.Counter {
 func (m Metrics) CrawlerDuration() prometheus.Gauge {
 	return m.crawlerDuration
 }
+
 func (m Metrics) FileUploadCounter() prometheus.Counter {
 	return m.fileUploadCounter
 }
@@ -123,8 +128,19 @@ func (m Metrics) FileUploadFailuresCounter() prometheus.Counter {
 	return m.fileUploadFailuresCounter
 }
 
-func UpdateMirrorLastUpdatedGauge(m *Metrics, backend string, last_updated_time float64) {
-	m.mirrorLastUpdatedGauge.With(prometheus.Labels{"backend": backend}).Set(last_updated_time)
+func (m Metrics) MirrorLastUpdatedGauge() prometheus.Gauge {
+	return m.mirrorLastUpdatedGauge
+}
+
+func UpdateAndPushEndJobMetrics(m *Metrics, startTime time.Time, cfg *config.Config, reg *prometheus.Registry) {
+	crawlerDuration(m, startTime)
+	timeNow := float64(time.Now().Unix())
+	mirrorLastUpdatedGauge(m, timeNow)
+
+	err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
+	if err != nil {
+		log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
+	}
 }
 
 func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Config) {
