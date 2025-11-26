@@ -17,6 +17,7 @@ import (
 
 	"github.com/antchfx/xmlquery"
 	"github.com/gocolly/colly/v2"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/rs/zerolog/log"
 )
@@ -63,11 +64,6 @@ func newCollector(cfg *config.Config, m *metrics.Metrics, uploader upload.Upload
 		isScraping:      false,
 	}
 
-	mirrorLastUpdatedState := &metrics.MirrorLastUpdatedState{
-		MirrorFreshnessUrl: cfg.MirrorFreshnessUrl,
-		Backends:           cfg.Backends,
-	}
-
 	client := client.NewClient(c, redirectHandler(c.Context, m, uploader))
 	c.SetClient(client)
 
@@ -86,7 +82,7 @@ func newCollector(cfg *config.Config, m *metrics.Metrics, uploader upload.Upload
 	c.OnError(errorHandler(m))
 
 	// Save successful responses to disk
-	c.OnResponse(responseHandler(c.Context, m, uploader, mirrorLastUpdatedState))
+	c.OnResponse(responseHandler(c.Context, m, uploader))
 
 	// Set up a crawling logic
 	c.OnHTML("a[href], link[href], img[src], script[src]", htmlHandler())
@@ -101,11 +97,16 @@ func newCollector(cfg *config.Config, m *metrics.Metrics, uploader upload.Upload
 	return c, nil
 }
 
-func (cr *Crawler) Run(m *metrics.Metrics) {
-
+func (cr *Crawler) Run(m *metrics.Metrics, cfg *config.Config, reg *prometheus.Registry) {
 	startTime := time.Now()
 
-	defer metrics.CrawlerDuration(m, startTime)
+	defer func() {
+		metrics.CrawlerDuration(m, startTime)
+		timeNow := float64(time.Now().Unix())
+		for _, backend := range cfg.Backends {
+			metrics.UpdateMirrorLastUpdatedGauge(m, backend, timeNow)
+		}
+	}()
 
 	// Start the crawler
 	err := cr.collector.Visit(cr.cfg.Site)
@@ -212,7 +213,7 @@ func scrapeHandler(crawlState *CrawlState) func(*colly.Response) {
 	}
 }
 
-func responseHandler(ctx context.Context, m *metrics.Metrics, uploader upload.Uploader, mirrorLastUpdatedState *metrics.MirrorLastUpdatedState) func(*colly.Response) {
+func responseHandler(ctx context.Context, m *metrics.Metrics, uploader upload.Uploader) func(*colly.Response) {
 	return func(r *colly.Response) {
 
 		contentType := r.Headers.Get("Content-Type")
@@ -263,14 +264,6 @@ func responseHandler(ctx context.Context, m *metrics.Metrics, uploader upload.Up
 				metrics.FileUploadFailed(m)
 			} else {
 				metrics.FileUploaded(m)
-				if r.Request.URL.String() == mirrorLastUpdatedState.MirrorFreshnessUrl {
-					for _, backend := range mirrorLastUpdatedState.Backends {
-						err = metrics.UpdateMirrorLastUpdatedGauge(m, mirrorLastUpdatedState.MirrorFreshnessUrl, backend)
-						if err != nil {
-							log.Error().Str("metric", "govuk_mirror_last_updated_time").Str("backend", backend).Err(err).Msg("Error updating metrics")
-						}
-					}
-				}
 			}
 		}
 	}

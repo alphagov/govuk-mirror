@@ -2,17 +2,13 @@ package metrics
 
 import (
 	"context"
-	"fmt"
 	"mirrorer/internal/config"
-	"net/http"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/rs/zerolog/log"
 )
-
-var httpClient = &http.Client{}
 
 type Metrics struct {
 	httpErrorCounter          prometheus.Counter
@@ -23,11 +19,6 @@ type Metrics struct {
 	fileUploadCounter         prometheus.Counter
 	fileUploadFailuresCounter prometheus.Counter
 	mirrorLastUpdatedGauge    *prometheus.GaugeVec
-}
-
-type MirrorLastUpdatedState struct {
-	MirrorFreshnessUrl string
-	Backends           []string
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
@@ -60,6 +51,10 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 			Name: "file_upload_failures_total",
 			Help: "Total number of upload failures encounterd by the crawler",
 		}),
+		mirrorLastUpdatedGauge: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "govuk_mirror_last_updated_time",
+			Help: "Last time the mirror was updated",
+		}, []string{"backend"}),
 	}
 
 	reg.MustRegister(m.httpErrorCounter)
@@ -69,18 +64,6 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 	reg.MustRegister(m.crawlerDuration)
 	reg.MustRegister(m.fileUploadCounter)
 	reg.MustRegister(m.fileUploadFailuresCounter)
-
-	return m
-}
-
-func NewMirrorMetrics(reg *prometheus.Registry) *Metrics {
-	m := &Metrics{
-		mirrorLastUpdatedGauge: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "govuk_mirror_last_updated_time",
-			Help: "Last time the mirror was updated",
-		}, []string{"backend"}),
-	}
-
 	reg.MustRegister(m.mirrorLastUpdatedGauge)
 
 	return m
@@ -140,50 +123,8 @@ func (m Metrics) FileUploadFailuresCounter() prometheus.Counter {
 	return m.fileUploadFailuresCounter
 }
 
-func closeResponse(resp *http.Response) {
-	if resp != nil && resp.Body != nil {
-		err := resp.Body.Close()
-		if err != nil {
-			log.Error().Err(err).Msg("Error closing response body")
-		}
-	}
-}
-
-func fetchMirrorFreshnessMetric(backend string, url string) (seconds float64, err error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return
-	}
-	req.Header.Set("Backend-Override", backend)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer closeResponse(resp)
-
-	if resp.StatusCode != http.StatusOK {
-		return -1, fmt.Errorf("request failed with status code: %s", resp.Status)
-	}
-
-	lastModified := resp.Header.Get("Last-Modified")
-
-	t, err := time.Parse(time.RFC1123, lastModified)
-	if err != nil {
-		return
-	}
-
-	return float64(t.Unix()), nil
-}
-
-func UpdateMirrorLastUpdatedGauge(m *Metrics, url string, backend string) error {
-	freshness, err := fetchMirrorFreshnessMetric(backend, url)
-	if err != nil {
-		return err
-	}
-
-	m.mirrorLastUpdatedGauge.With(prometheus.Labels{"backend": backend}).Set(freshness)
-	return nil
+func UpdateMirrorLastUpdatedGauge(m *Metrics, backend string, last_updated_time float64) {
+	m.mirrorLastUpdatedGauge.With(prometheus.Labels{"backend": backend}).Set(last_updated_time)
 }
 
 func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Config) {
