@@ -2,6 +2,7 @@ package upload
 
 import (
 	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"mirrorer/internal/aws_client_mocks"
 	"os"
@@ -168,7 +169,7 @@ func TestS3Uploader(t *testing.T) {
 
 		hasher := sha1.New()
 		hasher.Write([]byte(files["a_file"]))
-		checksum := fmt.Sprintf("%x", hasher.Sum(nil))
+		checksum := base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 
 		s3Client = &aws_client_mocks.FakeS3ObjectUploadingAPI{}
 		uploader := NewUploader(s3Client, "test-bucket")
