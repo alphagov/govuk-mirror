@@ -176,16 +176,11 @@ func updateMirrorResponseStatusCode(m *Metrics, url string, backend string) erro
 	return nil
 }
 
-func UpdateAndPushMirrorResponseStatusCode(m *Metrics, cfg *config.Config, reg *prometheus.Registry) {
+func UpdateMirrorResponseStatusCode(m *Metrics, cfg *config.Config) {
 	for _, backend := range cfg.MirrorBackends {
 		err := updateMirrorResponseStatusCode(m, cfg.MirrorAvailabilityUrl, backend)
 		if err != nil {
 			log.Error().Str("metric", "govuk_mirror_response_status_code").Str("backend", backend).Err(err).Msg("Error updating metrics")
-		}
-
-		err = push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
-		if err != nil {
-			log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
 		}
 	}
 }

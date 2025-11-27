@@ -4,9 +4,11 @@ import (
 	"mirrorer/internal/config"
 	"mirrorer/internal/logger"
 	"mirrorer/internal/metrics"
+	"net/http"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,12 +25,18 @@ func main() {
 
 	reg := prometheus.NewRegistry()
 	prometheusMetrics := metrics.NewMetrics(reg)
-	updateResponseMetrics(prometheusMetrics, cfg, reg)
+	go updateResponseMetrics(prometheusMetrics, cfg)
+
+	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+	err = http.ListenAndServe(":9090", nil)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Server error")
+	}
 }
 
-func updateResponseMetrics(m *metrics.Metrics, cfg *config.Config, reg *prometheus.Registry) {
+func updateResponseMetrics(m *metrics.Metrics, cfg *config.Config) {
 	for {
-		metrics.UpdateAndPushMirrorResponseStatusCode(m, cfg, reg)
+		metrics.UpdateMirrorResponseStatusCode(m, cfg)
 
 		time.Sleep(cfg.StatusCheckRefreshInterval)
 	}

@@ -82,7 +82,7 @@ func TestMetricsAreCorrectlyPrefixed(t *testing.T) {
 	}
 }
 
-func setup() (*Metrics, *config.Config, *prometheus.Registry) {
+func setup() (*Metrics, *config.Config) {
 	reg := prometheus.NewRegistry()
 	m := NewMetrics(reg)
 	cfg := &config.Config{
@@ -90,7 +90,7 @@ func setup() (*Metrics, *config.Config, *prometheus.Registry) {
 		MirrorBackends:             []string{"backend1", "backend2"},
 		StatusCheckRefreshInterval: 1 * time.Hour,
 	}
-	return m, cfg, reg
+	return m, cfg
 }
 
 func createTestServer(lastModified time.Time, statusCode int) *httptest.Server {
@@ -106,12 +106,6 @@ func createTestServer(lastModified time.Time, statusCode int) *httptest.Server {
 		} else {
 			http.Error(w, "Backend-Override header not set to backend1 or backend2", http.StatusBadRequest)
 		}
-	}))
-}
-
-func createTestPushGateway() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
 	}))
 }
 
@@ -138,20 +132,16 @@ func TestFetchMirrorAvailabilityMetric500StatusCode(t *testing.T) {
 }
 
 func TestUpdateMetrics(t *testing.T) {
-	m, cfg, reg := setup()
+	m, cfg := setup()
 
 	timestamp := time.Date(2006, time.January, 2, 15, 4, 5, 0, time.UTC)
 	ts := createTestServer(timestamp, http.StatusOK)
 	defer ts.Close()
 
-	pushGateway := createTestPushGateway()
-	defer pushGateway.Close()
-
 	cfg.MirrorAvailabilityUrl = ts.URL
 	cfg.MetricRefreshInterval = 1 * time.Second
-	cfg.PushGatewayUrl = pushGateway.URL
 
-	go UpdateAndPushMirrorResponseStatusCode(m, cfg, reg)
+	go UpdateMirrorResponseStatusCode(m, cfg)
 
 	time.Sleep(2 * time.Second)
 
