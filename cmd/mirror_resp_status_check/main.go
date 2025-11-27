@@ -24,7 +24,7 @@ func main() {
 	}
 
 	reg := prometheus.NewRegistry()
-	prometheusMetrics := metrics.NewMetrics(reg)
+	prometheusMetrics := metrics.NewResponseMetrics(reg)
 	go updateResponseMetrics(prometheusMetrics, cfg)
 
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
@@ -34,7 +34,7 @@ func main() {
 	}
 }
 
-func updateResponseMetrics(m *metrics.Metrics, cfg *config.Config) {
+func updateResponseMetrics(m *metrics.ResponseMetrics, cfg *config.Config) {
 	for {
 		metrics.UpdateMirrorResponseStatusCode(m, cfg)
 

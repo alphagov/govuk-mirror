@@ -82,9 +82,9 @@ func TestMetricsAreCorrectlyPrefixed(t *testing.T) {
 	}
 }
 
-func setup() (*Metrics, *config.Config) {
+func setup() (*ResponseMetrics, *config.Config) {
 	reg := prometheus.NewRegistry()
-	m := NewMetrics(reg)
+	m := NewResponseMetrics(reg)
 	cfg := &config.Config{
 		MirrorAvailabilityUrl:      "http://mirror.test/availability",
 		MirrorBackends:             []string{"backend1", "backend2"},

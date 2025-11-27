@@ -22,7 +22,6 @@ type Metrics struct {
 	fileUploadCounter         prometheus.Counter
 	fileUploadFailuresCounter prometheus.Counter
 	mirrorLastUpdatedGauge    prometheus.Gauge
-	mirrorResponseStatusCode  *prometheus.GaugeVec
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
@@ -59,10 +58,6 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 			Name: "govuk_mirror_last_updated_time",
 			Help: "Last time the mirror was updated",
 		}),
-		mirrorResponseStatusCode: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "govuk_mirror_response_status_code",
-			Help: "Response status code for the MIRROR_AVAILABILITY_URL probe",
-		}, []string{"backend"}),
 	}
 
 	reg.MustRegister(m.httpErrorCounter)
@@ -73,6 +68,22 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 	reg.MustRegister(m.fileUploadCounter)
 	reg.MustRegister(m.fileUploadFailuresCounter)
 	reg.MustRegister(m.mirrorLastUpdatedGauge)
+
+	return m
+}
+
+type ResponseMetrics struct {
+	mirrorResponseStatusCode *prometheus.GaugeVec
+}
+
+func NewResponseMetrics(reg *prometheus.Registry) *ResponseMetrics {
+	m := &ResponseMetrics{
+		mirrorResponseStatusCode: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "govuk_mirror_response_status_code",
+			Help: "Response status code for the MIRROR_AVAILABILITY_URL probe",
+		}, []string{"backend"}),
+	}
+
 	reg.MustRegister(m.mirrorResponseStatusCode)
 
 	return m
@@ -141,7 +152,7 @@ func (m Metrics) MirrorLastUpdatedGauge() prometheus.Gauge {
 	return m.mirrorLastUpdatedGauge
 }
 
-func (m Metrics) MirrorResponseStatusCode() prometheus.GaugeVec {
+func (m ResponseMetrics) MirrorResponseStatusCode() prometheus.GaugeVec {
 	return *m.mirrorResponseStatusCode
 }
 
@@ -166,7 +177,7 @@ func fetchMirrorAvailabilityMetric(backend string, url string) (httpStatus int, 
 	return resp.StatusCode, nil
 }
 
-func updateMirrorResponseStatusCode(m *Metrics, url string, backend string) error {
+func updateMirrorResponseStatusCode(m *ResponseMetrics, url string, backend string) error {
 	statusCode, err := fetchMirrorAvailabilityMetric(backend, url)
 	if err != nil {
 		return err
@@ -176,7 +187,7 @@ func updateMirrorResponseStatusCode(m *Metrics, url string, backend string) erro
 	return nil
 }
 
-func UpdateMirrorResponseStatusCode(m *Metrics, cfg *config.Config) {
+func UpdateMirrorResponseStatusCode(m *ResponseMetrics, cfg *config.Config) {
 	for _, backend := range cfg.MirrorBackends {
 		err := updateMirrorResponseStatusCode(m, cfg.MirrorAvailabilityUrl, backend)
 		if err != nil {
