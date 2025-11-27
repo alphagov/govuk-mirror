@@ -9,18 +9,21 @@ import (
 )
 
 type Config struct {
-	Site                  string            `env:"SITE"`
-	AllowedDomains        []string          `env:"ALLOWED_DOMAINS" envSeparator:","`
-	UserAgent             string            `env:"USER_AGENT" envDefault:"govuk-mirror-bot"`
-	Headers               map[string]string `env:"HEADERS"`
-	Concurrency           int               `env:"CONCURRENCY" envDefault:"10"`
-	URLFilters            []*regexp.Regexp  `env:"URL_RULES" envSeparator:","`
-	DisallowedURLFilters  []*regexp.Regexp  `env:"DISALLOWED_URL_RULES" envSeparator:","`
-	SkipValidation        bool              `env:"SKIP_VALIDATION" envDefault:"false"`
-	MetricRefreshInterval time.Duration     `env:"METRIC_REFRESH_INTERVAL" envDefault:"10s"`
-	Async                 bool              `env:"ASYNC" envDefault:"true"`
-	MirrorS3BucketName    string            `env:"S3_BUCKET_NAME"`
-	PushGatewayUrl        string            `env:"PROMETHEUS_PUSHGATEWAY_URL"`
+	Site                       string            `env:"SITE"`
+	AllowedDomains             []string          `env:"ALLOWED_DOMAINS" envSeparator:","`
+	UserAgent                  string            `env:"USER_AGENT" envDefault:"govuk-mirror-bot"`
+	Headers                    map[string]string `env:"HEADERS"`
+	Concurrency                int               `env:"CONCURRENCY" envDefault:"10"`
+	URLFilters                 []*regexp.Regexp  `env:"URL_RULES" envSeparator:","`
+	DisallowedURLFilters       []*regexp.Regexp  `env:"DISALLOWED_URL_RULES" envSeparator:","`
+	SkipValidation             bool              `env:"SKIP_VALIDATION" envDefault:"false"`
+	MetricRefreshInterval      time.Duration     `env:"METRIC_REFRESH_INTERVAL" envDefault:"10s"`
+	Async                      bool              `env:"ASYNC" envDefault:"true"`
+	MirrorS3BucketName         string            `env:"S3_BUCKET_NAME"`
+	PushGatewayUrl             string            `env:"PROMETHEUS_PUSHGATEWAY_URL"`
+	MirrorAvailabilityUrl      string            `env:"MIRROR_AVAILABILITY_URL"`
+	MirrorBackends             []string          `env:"MIRROR_BACKENDS"`
+	StatusCheckRefreshInterval time.Duration     `env:"STATUS_CHECK_REFRESH_INTERVAL" envDefault:"4h"`
 }
 
 func NewConfig() (*Config, error) {

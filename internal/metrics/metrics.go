@@ -3,12 +3,15 @@ package metrics
 import (
 	"context"
 	"mirrorer/internal/config"
+	"net/http"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"github.com/rs/zerolog/log"
 )
+
+var httpClient = &http.Client{}
 
 type Metrics struct {
 	httpErrorCounter          prometheus.Counter
@@ -19,6 +22,7 @@ type Metrics struct {
 	fileUploadCounter         prometheus.Counter
 	fileUploadFailuresCounter prometheus.Counter
 	mirrorLastUpdatedGauge    prometheus.Gauge
+	mirrorResponseStatusCode  *prometheus.GaugeVec
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
@@ -55,6 +59,10 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 			Name: "govuk_mirror_last_updated_time",
 			Help: "Last time the mirror was updated",
 		}),
+		mirrorResponseStatusCode: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "govuk_mirror_response_status_code",
+			Help: "Response status code for the MIRROR_AVAILABILITY_URL probe",
+		}, []string{"backend"}),
 	}
 
 	reg.MustRegister(m.httpErrorCounter)
@@ -65,6 +73,7 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 	reg.MustRegister(m.fileUploadCounter)
 	reg.MustRegister(m.fileUploadFailuresCounter)
 	reg.MustRegister(m.mirrorLastUpdatedGauge)
+	reg.MustRegister(m.mirrorResponseStatusCode)
 
 	return m
 }
@@ -132,10 +141,53 @@ func (m Metrics) MirrorLastUpdatedGauge() prometheus.Gauge {
 	return m.mirrorLastUpdatedGauge
 }
 
+func (m Metrics) MirrorResponseStatusCode() prometheus.GaugeVec {
+	return *m.mirrorResponseStatusCode
+}
+
 func UpdateEndJobMetrics(m *Metrics, startTime time.Time, cfg *config.Config) {
 	CrawlerDuration(m, startTime)
 	timeNow := float64(time.Now().Unix())
 	mirrorLastUpdatedGauge(m, timeNow)
+}
+
+func fetchMirrorAvailabilityMetric(backend string, url string) (httpStatus int, err error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return
+	}
+	req.Header.Set("Backend-Override", backend)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return
+	}
+
+	return resp.StatusCode, nil
+}
+
+func updateMirrorResponseStatusCode(m *Metrics, url string, backend string) error {
+	statusCode, err := fetchMirrorAvailabilityMetric(backend, url)
+	if err != nil {
+		return err
+	}
+
+	m.mirrorResponseStatusCode.With(prometheus.Labels{"backend": backend}).Set(float64(statusCode))
+	return nil
+}
+
+func UpdateAndPushMirrorResponseStatusCode(m *Metrics, cfg *config.Config, reg *prometheus.Registry) {
+	for _, backend := range cfg.MirrorBackends {
+		err := updateMirrorResponseStatusCode(m, cfg.MirrorAvailabilityUrl, backend)
+		if err != nil {
+			log.Error().Str("metric", "govuk_mirror_response_status_code").Str("backend", backend).Err(err).Msg("Error updating metrics")
+		}
+
+		err = push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
+		if err != nil {
+			log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
+		}
+	}
 }
 
 func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Config) {
