@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"context"
-	"os"
+	"mirrorer/internal/config"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,6 +18,7 @@ type Metrics struct {
 	crawlerDuration           prometheus.Gauge
 	fileUploadCounter         prometheus.Counter
 	fileUploadFailuresCounter prometheus.Counter
+	mirrorLastUpdatedGauge    prometheus.Gauge
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
@@ -50,6 +51,10 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 			Name: "file_upload_failures_total",
 			Help: "Total number of upload failures encounterd by the crawler",
 		}),
+		mirrorLastUpdatedGauge: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "govuk_mirror_last_updated_time",
+			Help: "Last time the mirror was updated",
+		}),
 	}
 
 	reg.MustRegister(m.httpErrorCounter)
@@ -59,6 +64,7 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 	reg.MustRegister(m.crawlerDuration)
 	reg.MustRegister(m.fileUploadCounter)
 	reg.MustRegister(m.fileUploadFailuresCounter)
+	reg.MustRegister(m.mirrorLastUpdatedGauge)
 
 	return m
 }
@@ -90,6 +96,10 @@ func CrawlerDuration(m *Metrics, t time.Time) {
 	m.crawlerDuration.Set(time.Since(t).Minutes())
 }
 
+func mirrorLastUpdatedGauge(m *Metrics, last_updated_time float64) {
+	m.mirrorLastUpdatedGauge.Set(last_updated_time)
+}
+
 func (m Metrics) HttpErrorCounter() prometheus.Counter {
 	return m.httpErrorCounter
 }
@@ -109,6 +119,7 @@ func (m Metrics) CrawledPagesCounter() prometheus.Counter {
 func (m Metrics) CrawlerDuration() prometheus.Gauge {
 	return m.crawlerDuration
 }
+
 func (m Metrics) FileUploadCounter() prometheus.Counter {
 	return m.fileUploadCounter
 }
@@ -117,22 +128,32 @@ func (m Metrics) FileUploadFailuresCounter() prometheus.Counter {
 	return m.fileUploadFailuresCounter
 }
 
-func PushMetrics(reg *prometheus.Registry, ctx context.Context, t time.Duration) {
-	ticker := time.NewTicker(t)
+func (m Metrics) MirrorLastUpdatedGauge() prometheus.Gauge {
+	return m.mirrorLastUpdatedGauge
+}
+
+func UpdateEndJobMetrics(m *Metrics, startTime time.Time, cfg *config.Config) {
+	CrawlerDuration(m, startTime)
+	timeNow := float64(time.Now().Unix())
+	mirrorLastUpdatedGauge(m, timeNow)
+}
+
+func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Config) {
+	ticker := time.NewTicker(cfg.MetricRefreshInterval)
 
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			err := push.New(os.Getenv("PROMETHEUS_PUSHGATEWAY_URL"), "mirror_metrics").Gatherer(reg).Push()
+			err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
 
 			if err != nil {
 				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
 			}
 
 		case <-ctx.Done():
-			err := push.New(os.Getenv("PROMETHEUS_PUSHGATEWAY_URL"), "mirror_metrics").Gatherer(reg).Push()
+			err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
 
 			if err != nil {
 				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")

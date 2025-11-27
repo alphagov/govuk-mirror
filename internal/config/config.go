@@ -20,6 +20,7 @@ type Config struct {
 	MetricRefreshInterval time.Duration     `env:"METRIC_REFRESH_INTERVAL" envDefault:"10s"`
 	Async                 bool              `env:"ASYNC" envDefault:"true"`
 	MirrorS3BucketName    string            `env:"S3_BUCKET_NAME"`
+	PushGatewayUrl        string            `env:"PROMETHEUS_PUSHGATEWAY_URL"`
 }
 
 func NewConfig() (*Config, error) {

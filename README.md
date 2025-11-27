@@ -36,6 +36,11 @@ Mirror pushes the following metrics to Prometheus Pushgateway:
 | `crawler_duration_minutes` | Number of minutes taken by the crawler |
 | `files_uploaded_total` | Total number of files the crawler has uploaded to the mirror |
 | `file_upload_failures_total` | Total number of upload failures encounterd by the crawler |
+| `govuk_mirror_last_updated_time` | A unix timestamp representing the date and time of when the crawling job finished |
+
+## Running tests locally
+
+Run `make test` to build the project and run all the tests or `make build` to just build the projects dependencies and then run a specific test, for example `go test -v ./internal/config`.
 
 ### View metrics locally
 
@@ -49,6 +54,12 @@ docker run -d -p 9091:9091 prom/pushgateway
 
 ```
 make test-local
+```
+
+3. Check the metrics on the Pushgateway
+
+```
+curl -X GET http://localhost:9091/api/v1/metrics | jq
 ```
 
 ## How to deploy

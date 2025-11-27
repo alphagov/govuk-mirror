@@ -96,11 +96,9 @@ func newCollector(cfg *config.Config, m *metrics.Metrics, uploader upload.Upload
 	return c, nil
 }
 
-func (cr *Crawler) Run(m *metrics.Metrics) {
-
+func (cr *Crawler) Run(m *metrics.Metrics, cfg *config.Config) {
 	startTime := time.Now()
-
-	defer metrics.CrawlerDuration(m, startTime)
+	defer metrics.UpdateEndJobMetrics(m, startTime, cfg)
 
 	// Start the crawler
 	err := cr.collector.Visit(cr.cfg.Site)
