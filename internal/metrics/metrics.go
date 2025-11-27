@@ -132,7 +132,14 @@ func PushMetrics(reg *prometheus.Registry, ctx context.Context, t time.Duration)
 			}
 
 		case <-ctx.Done():
+			err := push.New(os.Getenv("PROMETHEUS_PUSHGATEWAY_URL"), "mirror_metrics").Gatherer(reg).Push()
+
+			if err != nil {
+				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
+			}
+
 			log.Info().Msg("PushMetrics goroutine is shutting down...")
+
 			return
 		}
 	}
