@@ -24,31 +24,31 @@ type Metrics struct {
 func NewMetrics(reg *prometheus.Registry) *Metrics {
 	m := &Metrics{
 		crawledPagesCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "crawled_pages_total",
+			Name: "govuk_mirror_crawled_pages_total",
 			Help: "Total number of pages successfully crawled",
 		}),
 		httpErrorCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "crawler_errors_total",
+			Name: "govuk_mirror_crawler_errors_total",
 			Help: "Total number of HTTP errors encountered by the crawler",
 		}),
 		downloadErrorCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "crawler_pages_download_errors_total",
+			Name: "govuk_mirror_crawler_pages_download_errors_total",
 			Help: "Total number of download errors encountered by the crawler",
 		}),
 		downloadCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "crawler_pages_downloaded_total",
+			Name: "govuk_mirror_crawler_pages_downloaded_total",
 			Help: "Total number of files downloaded by the crawler",
 		}),
 		crawlerDuration: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "crawler_duration_minutes",
+			Name: "govuk_mirror_crawler_duration_minutes",
 			Help: "Duration of crawler in minutes",
 		}),
 		fileUploadCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "files_uploaded_total",
+			Name: "govuk_mirror_crawler_files_uploaded_total",
 			Help: "Total number of files the crawler has uploaded to the mirror",
 		}),
 		fileUploadFailuresCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "file_upload_failures_total",
+			Name: "govuk_mirror_crawler_file_upload_failures_total",
 			Help: "Total number of upload failures encounterd by the crawler",
 		}),
 		mirrorLastUpdatedGauge: prometheus.NewGauge(prometheus.GaugeOpts{

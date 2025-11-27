@@ -65,3 +65,16 @@ func TestCrawlerDurationGaugeMetric(t *testing.T) {
 		assert.Equal(t, float64(10), testutil.ToFloat64(m.CrawlerDuration()))
 	})
 }
+
+func TestMetricsAreCorrectlyPrefixed(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	_ = NewMetrics(reg)
+
+	metricValues, err := reg.Gather()
+	assert.NoError(t, err)
+
+	for _, metric := range metricValues {
+		assert.NotNil(t, metric.Name)
+		assert.Regexp(t, "govuk_mirror_.*", *metric.Name)
+	}
+}
