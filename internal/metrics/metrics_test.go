@@ -4,6 +4,7 @@ import (
 	"mirrorer/internal/config"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 
@@ -69,12 +70,18 @@ func TestCrawlerDurationGaugeMetric(t *testing.T) {
 	})
 }
 
-func TestMetricsAreCorrectlyPrefixed(t *testing.T) {
+func TestAllMetricsAreEmittedAndCorrectlyPrefixed(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	_ = NewMetrics(reg)
+	m := NewResponseMetrics(reg)
+	// GaugeVecs need a label for the metric to be emitted
+	m.mirrorResponseStatusCode.With(prometheus.Labels{"backend": "backend"}).Set(float64(200))
 
 	metricValues, err := reg.Gather()
 	assert.NoError(t, err)
+
+	numMetrics := reflect.TypeOf(Metrics{}).NumField() + reflect.TypeOf(ResponseMetrics{}).NumField()
+	assert.Equal(t, len(metricValues), numMetrics)
 
 	for _, metric := range metricValues {
 		assert.NotNil(t, metric.Name)
@@ -141,9 +148,7 @@ func TestUpdateMetrics(t *testing.T) {
 	cfg.MirrorAvailabilityUrl = ts.URL
 	cfg.MetricRefreshInterval = 1 * time.Second
 
-	go UpdateMirrorResponseStatusCode(m, cfg)
-
-	time.Sleep(2 * time.Second)
+	UpdateMirrorResponseStatusCode(m, cfg)
 
 	assert.Equal(t, 2, testutil.CollectAndCount(m.mirrorResponseStatusCode))
 	assert.Equal(t, float64(http.StatusOK), testutil.ToFloat64(m.mirrorResponseStatusCode.WithLabelValues("backend1")))
