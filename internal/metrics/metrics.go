@@ -4,6 +4,7 @@ import (
 	"context"
 	"mirrorer/internal/config"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -199,19 +200,25 @@ func UpdateMirrorResponseStatusCode(m *ResponseMetrics, cfg *config.Config) {
 func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Config) {
 	ticker := time.NewTicker(cfg.MetricRefreshInterval)
 
+	hostname, hostNameSet := os.LookupEnv("HOSTNAME")
+
+	if !hostNameSet {
+		hostname = "unknown"
+	}
+
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
+			err := push.New(cfg.PushGatewayUrl, hostname).Gatherer(reg).Push()
 
 			if err != nil {
 				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
 			}
 
 		case <-ctx.Done():
-			err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Gatherer(reg).Push()
+			err := push.New(cfg.PushGatewayUrl, hostname).Gatherer(reg).Push()
 
 			if err != nil {
 				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
