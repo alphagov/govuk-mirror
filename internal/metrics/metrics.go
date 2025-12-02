@@ -211,14 +211,14 @@ func PushMetrics(reg *prometheus.Registry, ctx context.Context, cfg *config.Conf
 	for {
 		select {
 		case <-ticker.C:
-			err := push.New(cfg.PushGatewayUrl, hostname).Gatherer(reg).Push()
+			err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Grouping("instance", hostname).Gatherer(reg).Push()
 
 			if err != nil {
 				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
 			}
 
 		case <-ctx.Done():
-			err := push.New(cfg.PushGatewayUrl, hostname).Gatherer(reg).Push()
+			err := push.New(cfg.PushGatewayUrl, "mirror_metrics").Grouping("instance", hostname).Gatherer(reg).Push()
 
 			if err != nil {
 				log.Error().Err(err).Msg("Error pushing metrics to Prometheus Pushgateway")
