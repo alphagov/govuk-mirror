@@ -13,8 +13,7 @@ import (
 )
 
 func main() {
-	err := logger.InitialiseLogger()
-	if err != nil {
+	if err := logger.InitialiseLogger(); err != nil {
 		log.Fatal().Err(err).Msg("Error parsing log level")
 	}
 
@@ -28,8 +27,7 @@ func main() {
 	go updateResponseMetrics(prometheusMetrics, cfg)
 
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
-	err = http.ListenAndServe(":9090", nil)
-	if err != nil {
+	if err := http.ListenAndServe(":9090", nil); err != nil {
 		log.Fatal().Err(err).Msg("Server error")
 	}
 }

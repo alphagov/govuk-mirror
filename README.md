@@ -32,14 +32,19 @@ Mirror pushes the following metrics to Prometheus Pushgateway:
 
 | Metric | Description  |
 |----------|----------------------|
-| `crawled_pages_total` | Total number of HTTP errors encountered by the crawler |
-| `crawler_errors_total` | Total number of HTTP errors encountered by the crawler |
-| `crawler_pages_download_errors_total` | Total number of download errors encountered by the crawler |
-| `crawler_pages_downloaded_total` | Total number of files downloaded by the crawler |
-| `crawler_duration_minutes` | Number of minutes taken by the crawler |
-| `files_uploaded_total` | Total number of files the crawler has uploaded to the mirror |
-| `file_upload_failures_total` | Total number of upload failures encounterd by the crawler |
+| `govuk_mirror_crawled_pages_total` | Total number of HTTP errors encountered by the crawler |
+| `govuk_mirror_crawler_errors_total` | Total number of HTTP errors encountered by the crawler |
+| `govuk_mirror_crawler_pages_download_errors_total` | Total number of download errors encountered by the crawler |
+| `govuk_mirror_crawler_pages_downloaded_total` | Total number of files downloaded by the crawler |
+| `govuk_mirror_crawler_duration_minutes` | Number of minutes taken by the crawler |
+| `govuk_mirror_crawler_files_uploaded_total` | Total number of files the crawler has uploaded to the mirror |
+| `govuk_mirror_crawler_file_upload_failures_total` | Total number of upload failures encounterd by the crawler |
 | `govuk_mirror_last_updated_time` | A unix timestamp representing the date and time of when the crawling job finished |
+
+Mirror exposes the following metric to Prometheus:
+
+| Metric | Description  |
+|----------|----------------------|
 | `govuk_mirror_response_status_code` | An HTTP status code representing the response status of the page referenced by the MIRROR_AVAILABILITY_URL. Has the label backend for each backend override being used. |
 
 ## Running tests locally

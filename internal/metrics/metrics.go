@@ -163,16 +163,16 @@ func UpdateEndJobMetrics(m *Metrics, startTime time.Time, cfg *config.Config) {
 	mirrorLastUpdatedGauge(m, timeNow)
 }
 
-func fetchMirrorAvailabilityMetric(backend string, url string) (httpStatus int, err error) {
+func fetchMirrorAvailabilityMetric(backend string, url string) (int, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return
+		return 0, err
 	}
 	req.Header.Set("Backend-Override", backend)
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return
+		return 0, err
 	}
 
 	return resp.StatusCode, nil
