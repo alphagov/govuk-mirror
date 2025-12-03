@@ -26,8 +26,8 @@ github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 h1:WKuaxf++XKWlHWu9ECbMlha8WOEG
 github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4/go.mod h1:ZWy7j6v1vWGmPReu0iSGvRiise4YI5SkR3OHKTZ6Wuc=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.15 h1:NLYTEyZmVZo0Qh183sC8nC+ydJXOOeIL/qI/sS3PdLY=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.15/go.mod h1:Z803iB3B0bc8oJV8zH2PERLRfQUJ2n2BXISpsA4+O1M=
-github.com/aws/aws-sdk-go-v2/service/athena v1.56.1 h1:kxedtDfKs4SrO4rOY5zxmT/C6iRRijfoM52jkXk4HV0=
-github.com/aws/aws-sdk-go-v2/service/athena v1.56.1/go.mod h1:4A0RedsMl3WXKVbYHL9eXnyfi1ZYajDjQz7FxGJIVJk=
+github.com/aws/aws-sdk-go-v2/service/athena v1.56.2 h1:q9amfZSuLyugOS77ebccI+Wsr8EqlcS8tyaaOd5rvBE=
+github.com/aws/aws-sdk-go-v2/service/athena v1.56.2/go.mod h1:8YEy1lfwBoQtk8vog3ssTa8cRM/bYwVvEbQxBlkEhRo=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.4 h1:0ryTNEdJbzUCEWkVXEXoqlXV72J5keC1GvILMOuD00E=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.4/go.mod h1:HQ4qwNZh32C3CBeO6iJLQlgtMzqeG17ziAA/3KDJFow=
 github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.6 h1:P1MU/SuhadGvg2jtviDXPEejU3jBNhoeeAlRadHzvHI=
