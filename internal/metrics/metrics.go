@@ -68,7 +68,6 @@ func NewMetrics(reg *prometheus.Registry) *Metrics {
 	reg.MustRegister(m.crawlerDuration)
 	reg.MustRegister(m.fileUploadCounter)
 	reg.MustRegister(m.fileUploadFailuresCounter)
-	reg.MustRegister(m.mirrorLastUpdatedGauge)
 
 	return m
 }
