@@ -72,10 +72,14 @@ func TestCrawlerDurationGaugeMetric(t *testing.T) {
 
 func TestAllMetricsAreEmittedAndCorrectlyPrefixed(t *testing.T) {
 	reg := prometheus.NewRegistry()
-	_ = NewMetrics(reg)
-	m := NewResponseMetrics(reg)
+	m := NewMetrics(reg)
+
+	// govuk_mirror_last_updated_time has to be manually registered
+	reg.MustRegister(m.MirrorLastUpdatedGauge())
+	responseMetrics := NewResponseMetrics(reg)
+
 	// GaugeVecs need a label for the metric to be emitted
-	m.mirrorResponseStatusCode.With(prometheus.Labels{"backend": "backend"}).Set(float64(200))
+	responseMetrics.mirrorResponseStatusCode.With(prometheus.Labels{"backend": "backend"}).Set(float64(200))
 
 	metricValues, err := reg.Gather()
 	assert.NoError(t, err)
