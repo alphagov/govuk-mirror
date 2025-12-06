@@ -396,7 +396,7 @@ func TestRun(t *testing.T) {
 
 	// Initialize uploader
 	uploader := &uploadfakes.FakeUploader{}
-	uploader.UploadFileStub = func(ctx context.Context, file string, key string) error {
+	uploader.UploadFileStub = func(ctx context.Context, file string, key string, contentType string) error {
 		if file == hostname+"/3.html" {
 			return fmt.Errorf("error uploading")
 		} else {
@@ -480,7 +480,7 @@ func TestRun(t *testing.T) {
 
 		var uploadedPaths []string
 		for i := 0; i < uploader.UploadFileCallCount(); i++ {
-			_, path, _ := uploader.UploadFileArgsForCall(i)
+			_, path, _, _ := uploader.UploadFileArgsForCall(i)
 			uploadedPaths = append(uploadedPaths, path)
 		}
 

@@ -133,7 +133,7 @@ func redirectHandler(ctx context.Context, m *metrics.Metrics, uploader upload.Up
 				log.Error().Err(err).Msg(fmt.Sprintf("Error generating file path for %s", redirectReq.URL.String()))
 			}
 
-			err = uploader.UploadFile(ctx, path, path)
+			err = uploader.UploadFile(ctx, path, path, "text/html")
 			if err != nil {
 				log.Error().Err(err).Msg(fmt.Sprintf("Error uploading %s", path))
 				metrics.FileUploadFailed(m)
@@ -254,7 +254,7 @@ func responseHandler(ctx context.Context, m *metrics.Metrics, uploader upload.Up
 				log.Error().Err(err).Msg(fmt.Sprintf("Error generating file path for %s", r.Request.URL.String()))
 			}
 
-			err = uploader.UploadFile(ctx, path, path)
+			err = uploader.UploadFile(ctx, path, path, contentType)
 			if err != nil {
 				log.Error().Err(err).Msg(fmt.Sprintf("Error uploading %s", path))
 				metrics.FileUploadFailed(m)
