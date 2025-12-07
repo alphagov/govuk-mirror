@@ -114,6 +114,7 @@ func TestS3Uploader(t *testing.T) {
 
 		s3Client.HeadObjectReturns(&s3.HeadObjectOutput{
 			ContentLength: aws.Int64(int64(len(files["a_file"]))),
+			ContentType:   aws.String("text/html"),
 		}, nil)
 
 		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key", "text/html")
@@ -134,6 +135,7 @@ func TestS3Uploader(t *testing.T) {
 
 		s3Client.HeadObjectReturns(&s3.HeadObjectOutput{
 			ContentLength: aws.Int64(1),
+			ContentType:   aws.String("text/html"),
 		}, nil)
 		s3Client.PutObjectReturns(&s3.PutObjectOutput{
 			Size: aws.Int64(int64(len(files["a_file"]))),
@@ -156,8 +158,8 @@ func TestS3Uploader(t *testing.T) {
 		uploader := NewUploader(s3Client, "test-bucket")
 
 		s3Client.HeadObjectReturns(&s3.HeadObjectOutput{
-			ContentLength: aws.Int64(1),
-			ContentType: aws.String("application/octet-stream"),
+			ContentLength: aws.Int64(int64(len(files["a_file"]))),
+			ContentType:   aws.String("application/octet-stream"),
 		}, nil)
 		s3Client.PutObjectReturns(&s3.PutObjectOutput{
 			Size: aws.Int64(int64(len(files["a_file"]))),

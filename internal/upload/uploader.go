@@ -72,7 +72,6 @@ func (u S3Uploader) UploadFile(ctx context.Context, filePath string, destination
 			log.Info().Msgf("File %s has a different content type on S3 than live, uploading", filePath)
 		}
 
-		fmt.Println("FILE IS DIFFERENT")
 		hasher := sha1.New()
 
 		if _, err := io.Copy(hasher, file); err != nil {
