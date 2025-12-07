@@ -21,7 +21,7 @@ import (
 //counterfeiter:generate . Uploader
 type Uploader interface {
 	// UploadFile uploads the file at filePath to the destinationKey in the remote file storage
-	UploadFile(ctx context.Context, filePath string, destinationKey string) error
+	UploadFile(ctx context.Context, filePath string, destinationKey string, contentType string) error
 }
 
 type S3Uploader struct {
@@ -36,7 +36,7 @@ func NewUploader(s3 aws_client_interfaces.S3ObjectUploadingAPI, bucketName strin
 	}
 }
 
-func (u S3Uploader) UploadFile(ctx context.Context, filePath string, destinationKey string) error {
+func (u S3Uploader) UploadFile(ctx context.Context, filePath string, destinationKey string, contentType string) error {
 	fileInfo, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		return err
@@ -67,7 +67,12 @@ func (u S3Uploader) UploadFile(ctx context.Context, filePath string, destination
 
 	// the object wasn't present in the remote
 	// or the sizes were different
-	if s3ObjectMeta == nil || *s3ObjectMeta.ContentLength != fileInfo.Size() {
+	if s3ObjectMeta == nil || *s3ObjectMeta.ContentLength != fileInfo.Size() || (s3ObjectMeta.ContentType != nil && *s3ObjectMeta.ContentType != contentType) {
+		if s3ObjectMeta != nil && s3ObjectMeta.ContentType != nil && *s3ObjectMeta.ContentType != contentType {
+			log.Info().Msgf("File %s has a different content type on S3 than live, uploading", filePath)
+		}
+
+		fmt.Println("FILE IS DIFFERENT")
 		hasher := sha1.New()
 
 		if _, err := io.Copy(hasher, file); err != nil {
@@ -86,6 +91,7 @@ func (u S3Uploader) UploadFile(ctx context.Context, filePath string, destination
 			Body:              io.Reader(file),
 			ChecksumAlgorithm: types.ChecksumAlgorithmSha1,
 			ChecksumSHA1:      aws.String(checksum),
+			ContentType:       aws.String(contentType),
 		})
 
 		if err != nil {

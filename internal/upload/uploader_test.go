@@ -38,6 +38,7 @@ func assertFileWasUploaded(
 	t *testing.T,
 	s3Client *aws_client_mocks.FakeS3ObjectUploadingAPI,
 	key string,
+	contentType string,
 ) {
 
 	assert.Equal(t, 1, s3Client.PutObjectCallCount(), "uploader should have made one PutObject call")
@@ -45,6 +46,7 @@ func assertFileWasUploaded(
 	_, putCallArgs, _ := s3Client.PutObjectArgsForCall(0)
 	assert.Equal(t, aws.String("test-bucket"), putCallArgs.Bucket)
 	assert.Equal(t, aws.String(key), putCallArgs.Key)
+	assert.Equal(t, aws.String(contentType), putCallArgs.ContentType)
 	// can't make assertions about the content of the file because
 	// the reader is closed at the end of the method
 }
@@ -59,7 +61,7 @@ func TestS3Uploader(t *testing.T) {
 		s3Client = &aws_client_mocks.FakeS3ObjectUploadingAPI{}
 		uploader := NewUploader(s3Client, "test-bucket")
 
-		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "unknown_file"), "key")
+		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "unknown_file"), "key", "text/html")
 		assert.Error(t, err, fmt.Errorf("file not found"))
 	})
 
@@ -74,7 +76,7 @@ func TestS3Uploader(t *testing.T) {
 
 		var irrelevantAWSError error = &types.TooManyParts{}
 		s3Client.HeadObjectReturns(nil, irrelevantAWSError)
-		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key")
+		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key", "text/html")
 
 		assert.ErrorIs(t, err, irrelevantAWSError)
 	})
@@ -94,10 +96,10 @@ func TestS3Uploader(t *testing.T) {
 			Size: aws.Int64(int64(len(files["a_file"]))),
 		}, nil)
 
-		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key")
+		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key", "text/html")
 		assert.NoError(t, err)
 
-		assertFileWasUploaded(t, s3Client, "key")
+		assertFileWasUploaded(t, s3Client, "key", "text/html")
 	})
 
 	t.Run("if the object exists in s3, and the size is the same, does not upload the file", func(t *testing.T) {
@@ -114,7 +116,7 @@ func TestS3Uploader(t *testing.T) {
 			ContentLength: aws.Int64(int64(len(files["a_file"]))),
 		}, nil)
 
-		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key")
+		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key", "text/html")
 		assert.NoError(t, err)
 
 		assert.Equal(t, 0, s3Client.PutObjectCallCount())
@@ -137,10 +139,34 @@ func TestS3Uploader(t *testing.T) {
 			Size: aws.Int64(int64(len(files["a_file"]))),
 		}, nil)
 
-		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key")
+		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key", "text/html")
 		assert.NoError(t, err)
 
-		assertFileWasUploaded(t, s3Client, "key")
+		assertFileWasUploaded(t, s3Client, "key", "text/html")
+	})
+
+	t.Run("if the object exists in s3, and the content-type is different, uploads the file", func(t *testing.T) {
+		files := map[string]string{
+			"a_file": "some content",
+		}
+		tmpDir := setupFixtures(t, files)
+		defer teardownFixtures(t, tmpDir)
+
+		s3Client = &aws_client_mocks.FakeS3ObjectUploadingAPI{}
+		uploader := NewUploader(s3Client, "test-bucket")
+
+		s3Client.HeadObjectReturns(&s3.HeadObjectOutput{
+			ContentLength: aws.Int64(1),
+			ContentType: aws.String("application/octet-stream"),
+		}, nil)
+		s3Client.PutObjectReturns(&s3.PutObjectOutput{
+			Size: aws.Int64(int64(len(files["a_file"]))),
+		}, nil)
+
+		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key", "text/html")
+		assert.NoError(t, err)
+
+		assertFileWasUploaded(t, s3Client, "key", "text/html")
 	})
 
 	t.Run("returns an error if putting the object fails", func(t *testing.T) {
@@ -155,7 +181,7 @@ func TestS3Uploader(t *testing.T) {
 		expectedError := &types.InvalidRequest{}
 		s3Client.HeadObjectReturns(nil, &types.NotFound{})
 		s3Client.PutObjectReturns(nil, expectedError)
-		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key")
+		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key", "text/html")
 
 		assert.ErrorIs(t, err, expectedError)
 	})
@@ -180,7 +206,7 @@ func TestS3Uploader(t *testing.T) {
 			ChecksumSHA1: aws.String(checksum),
 		}, nil)
 
-		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key")
+		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key", "text/html")
 		assert.NoError(t, err)
 
 		assert.Equal(t, 1, s3Client.PutObjectCallCount())
@@ -189,5 +215,26 @@ func TestS3Uploader(t *testing.T) {
 
 		assert.Equal(t, types.ChecksumAlgorithmSha1, args.ChecksumAlgorithm)
 		assert.Equal(t, aws.String(checksum), args.ChecksumSHA1)
+	})
+
+	t.Run("when uploading a file, the Content Type is provided", func(t *testing.T) {
+		files := map[string]string{
+			"a_file": "some content",
+		}
+		tmpDir := setupFixtures(t, files)
+		defer teardownFixtures(t, tmpDir)
+
+		s3Client = &aws_client_mocks.FakeS3ObjectUploadingAPI{}
+		uploader := NewUploader(s3Client, "test-bucket")
+
+		s3Client.HeadObjectReturns(nil, &types.NotFound{})
+		s3Client.PutObjectReturns(&s3.PutObjectOutput{
+			Size: aws.Int64(int64(len(files["a_file"]))),
+		}, nil)
+
+		err := uploader.UploadFile(t.Context(), path.Join(tmpDir, "a_file"), "key", "text/css")
+		assert.NoError(t, err)
+
+		assertFileWasUploaded(t, s3Client, "key", "text/css")
 	})
 }
