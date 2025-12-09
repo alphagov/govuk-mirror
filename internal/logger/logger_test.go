@@ -1,11 +1,26 @@
 package logger
 
 import (
+	"os"
 	"testing"
 
 	"github.com/ctx42/logkit/pkg/logkit"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 )
+
+func Test_Zerolog_Config(t *testing.T) {
+	// Parse log level BEFORE creating the logger
+	logLevel, ok := os.LookupEnv("LOG_LEVEL")
+	if !ok {
+		logLevel = "INFO"
+	}
+
+	level, err := zerolog.ParseLevel(logLevel)
+	assert.NoError(t, err, "Parsing log level should not error")
+
+	assert.Equal(t, level, zerolog.InfoLevel, "Log level should be INFO")
+}
 
 func Test_Zerolog(t *testing.T) {
 	testLogStore := logkit.New(t) // Initialize logkit.
