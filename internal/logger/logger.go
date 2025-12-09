@@ -8,9 +8,7 @@ import (
 )
 
 func InitialiseLogger() error {
-	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-
+	// Parse log level BEFORE creating the logger
 	logLevel, ok := os.LookupEnv("LOG_LEVEL")
 	if !ok {
 		logLevel = "INFO"
@@ -21,7 +19,12 @@ func InitialiseLogger() error {
 		return err
 	}
 
+	// Set global level first
 	zerolog.SetGlobalLevel(level)
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
+
+	// Create logger with timestamp after level is set
+	log.Logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
 
 	return nil
 }
