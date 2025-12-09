@@ -165,12 +165,14 @@ func UpdateEndJobMetrics(m *Metrics, startTime time.Time, cfg *config.Config) {
 func fetchMirrorAvailabilityMetric(backend string, url string) (int, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		log.Error().Str("metric", "govuk_mirror_response_status_code").Str("backend", backend).Err(err).Msg("Failed to form a HTTP GET request")
 		return 0, err
 	}
 	req.Header.Set("Backend-Override", backend)
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
+		log.Error().Str("metric", "govuk_mirror_response_status_code").Str("backend", backend).Err(err).Msg("Failed to get a HTTP response")
 		return 0, err
 	}
 
@@ -180,6 +182,7 @@ func fetchMirrorAvailabilityMetric(backend string, url string) (int, error) {
 func updateMirrorResponseStatusCode(m *ResponseMetrics, url string, backend string) error {
 	statusCode, err := fetchMirrorAvailabilityMetric(backend, url)
 	if err != nil {
+		log.Error().Str("metric", "govuk_mirror_response_status_code").Str("backend", backend).Err(err).Msg("Failed to get a HTTP status code")
 		return err
 	}
 
