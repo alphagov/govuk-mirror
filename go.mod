@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/athena v1.56.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.94.0
 	github.com/caarlos0/env/v9 v9.0.0
-	github.com/gocolly/colly/v2 v2.2.0
+	github.com/gocolly/colly/v2 v2.3.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rs/zerolog v1.34.0
 	github.com/stretchr/testify v1.11.1
