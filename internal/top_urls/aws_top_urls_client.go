@@ -115,7 +115,7 @@ func (topUrlsClient *AwsTopUrlsClient) startAthenaQuery(ctx context.Context) (at
 		SELECT
 		    url, count(1) as "count"
 		FROM
-		    fastly_logs.govuk_www
+		    govuk_www
 		WHERE
 		    date = ?
 		    AND month = ?
