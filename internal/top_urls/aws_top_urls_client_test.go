@@ -217,4 +217,27 @@ func TestAwsGetTopUrls(t *testing.T) {
 		assert.Equal(t, expectedUnsampled, topUrls.TopUnsampledUrls)
 		assert.Equal(t, expectedSampled, topUrls.RemainingSampledUrls)
 	})
+
+	t.Run("GetTopUrls sets the catalog and database in the query", func(t *testing.T) {
+		// StartQueryExecution returns an error for the sake of minimising the amount of
+		// test setup needed. This test is only testing what is passed to StartQueryExecution
+		random := rand.New(rand.NewSource(99))
+		expectedErr := fmt.Errorf("Test Error Returned by AWS")
+
+		athenaClient := aws_client_mocks.FakeAthenaExecuteQueryApi{}
+		athenaClient.StartQueryExecutionReturns(nil, expectedErr)
+		s3Client := aws_client_mocks.FakeS3GetObjectAPI{}
+
+		topUrlsClient := top_urls.NewAwsTopUrlsClient(cfg, &athenaClient, &s3Client)
+
+		_, err := topUrlsClient.GetTopUrls(random)
+		assert.ErrorIs(t, err, expectedErr)
+		assert.Equal(t, 1, athenaClient.StartQueryExecutionCallCount())
+
+		_, callParams, _ := athenaClient.StartQueryExecutionArgsForCall(0)
+
+		assert.NotNil(t, callParams.QueryExecutionContext)
+		assert.Equal(t, aws.String("AwsDataCatalog"), callParams.QueryExecutionContext.Catalog)
+		assert.Equal(t, aws.String("fastly_logs"), callParams.QueryExecutionContext.Database)
+	})
 }

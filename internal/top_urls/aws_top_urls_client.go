@@ -13,6 +13,7 @@ import (
 	"mirrorer/internal/aws_client_interfaces"
 	"mirrorer/internal/config"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/athena"
 	athenaTypes "github.com/aws/aws-sdk-go-v2/service/athena/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -137,6 +138,10 @@ func (topUrlsClient *AwsTopUrlsClient) startAthenaQuery(ctx context.Context) (at
 			strconv.FormatInt(int64(yesterday.Day()), 10),
 			strconv.FormatInt(int64(yesterday.Month()), 10),
 			strconv.FormatInt(int64(yesterday.Year()), 10),
+		},
+		QueryExecutionContext: &athenaTypes.QueryExecutionContext{
+			Catalog:  aws.String("AwsDataCatalog"),
+			Database: aws.String("fastly_logs"),
 		},
 	})
 
