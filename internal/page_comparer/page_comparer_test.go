@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/html"
 )
 
 // InvalidHTMLReader is used in place of a string reader
@@ -54,7 +55,21 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 		assert.True(t, same)
 	})
 
-	t.Run("returns false if the two documents have the same body content", func(t *testing.T) {
+	t.Run("returns true if the two documents have the same text visible to the user, but other elements different", func(t *testing.T) {
+		pageA := strings.NewReader(`<html><body>
+			<p>Hello</p>
+			<script>alert("Script");</script>
+		</body></html>`)
+		pageB := strings.NewReader(`<html><body>
+			<p>Hello</p>
+			<link rel="stylesheet" src="style.css" />
+		</body></html>`)
+
+		same, _ := page_comparer.HaveSameBody(pageA, pageB)
+		assert.True(t, same)
+	})
+
+	t.Run("returns false if the two documents have different text visible to the user", func(t *testing.T) {
 		pageA := strings.NewReader("<html><body><p>Hello</p></body></html>")
 		pageB := strings.NewReader("<html><body><p>Goodbye</p></body></html>")
 
@@ -85,4 +100,68 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestExtractVisibleTextFromHTML(t *testing.T) {
+	tests := []struct {
+		name      string
+		htmlInput string
+		expected  string
+	}{
+		{
+			name:      "Ignored tag only",
+			htmlInput: "<script>alert('Hello!');</script>",
+			expected:  "",
+		},
+		{
+			name:      "Empty body",
+			htmlInput: "<html><body></body></html>",
+			expected:  "",
+		},
+		{
+			name:      "Empty string",
+			htmlInput: "",
+			expected:  "",
+		},
+		{
+			name:      "Document with one visible text",
+			htmlInput: "<html><body><h1>Hello, World!</h1></body></html>",
+			expected:  "Hello, World!",
+		},
+		{
+			name: "Long document with many pieces of visible text",
+			htmlInput: `
+				<!DOCTYPE html>
+				<html>
+				<head>
+					<title>Ignored</title>
+					<style>body { background: #f00; }</style>
+				</head>
+				<body>
+					<h1>Header</h1>
+					<p>
+						Paragraph one containing line
+						breaks and indenting spaces
+					</p>
+					<p>Paragraph two.</p>
+					<div>
+						<span>Text inside a span.</span>
+					</div>
+					<script>console.log("Ignored script");</script>
+				</body>
+				</html>
+			`,
+			expected: "Header\nParagraph one containing line\n\t\t\t\t\t\tbreaks and indenting spaces\nParagraph two.\nText inside a span.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node, err := html.Parse(strings.NewReader(tt.htmlInput))
+			assert.Nil(t, err, "failed to parse input HTML: %s", tt.htmlInput)
+
+			actual := page_comparer.ExtractVisibleTextFromHTML(node)
+			assert.Equal(t, actual, tt.expected)
+		})
+	}
 }
