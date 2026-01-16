@@ -3,7 +3,6 @@ package page_comparer
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -11,18 +10,21 @@ import (
 	"golang.org/x/net/html"
 )
 
-var ErrNoBody = errors.New("no body tag found in HTML")
-
+// HaveSameBody takes two strings, which it assumes to be HTML, and compares the text in that page which
+// would be visible to a user. If the text is the same, the page bodies are considered to be the same.
 func HaveSameBody(pageA io.Reader, pageB io.Reader) (bool, error) {
-	bodyA, err := extractHtmlBody(pageA)
+	docA, err := html.Parse(pageA)
 	if err != nil {
 		return false, err
 	}
 
-	bodyB, err := extractHtmlBody(pageB)
+	docB, err := html.Parse(pageB)
 	if err != nil {
 		return false, err
 	}
+
+	bodyA := ExtractVisibleTextFromHTML(docA)
+	bodyB := ExtractVisibleTextFromHTML(docB)
 
 	checksumA, err := checksum(bodyA)
 	if err != nil {
@@ -37,28 +39,46 @@ func HaveSameBody(pageA io.Reader, pageB io.Reader) (bool, error) {
 	return checksumA == checksumB, nil
 }
 
-func extractHtmlBody(page io.Reader) (string, error) {
-	doc, err := html.Parse(page)
-	if err != nil {
-		return "", err
-	}
+// ExtractVisibleTextFromHTML takes an *html.Node and recurses its descendents
+// to find any and all text that would be visible to a user in their browser.
+//
+// We need this because there is lots of text in HTML that can be different
+// between two documents without affecting whether it would appear different
+// to a user. For our purposes, we only care about whether the text on the
+// page is different.
+func ExtractVisibleTextFromHTML(node *html.Node) string {
+	var output strings.Builder
+	var extractText func(*html.Node)
 
-	for node := range doc.Descendants() {
-		if node.Type == html.ElementNode && node.Data == "body" {
-			return renderNode(node)
+	// Recursive function to traverse the tree
+	extractText = func(n *html.Node) {
+		// Ignore head, style, link, script etc
+		// Don't descend into them
+		if n.Type == html.ElementNode {
+			switch n.Data {
+			case "head", "meta", "style", "link", "script":
+				return
+			}
+		}
+
+		// Text nodes contain text visible on the screen
+		if n.Type == html.TextNode {
+			text := strings.TrimSpace(n.Data)
+			if text != "" {
+				output.WriteString(text + "\n")
+			}
+		}
+
+		// Recursively process child nodes
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			extractText(c)
 		}
 	}
 
-	return "", ErrNoBody
-}
+	// Start the recursion from the root node
+	extractText(node)
 
-func renderNode(node *html.Node) (string, error) {
-	buf := strings.Builder{}
-	err := html.Render(&buf, node)
-	if err != nil {
-		return "", err
-	}
-	return buf.String(), nil
+	return strings.TrimSpace(output.String())
 }
 
 func checksum(str string) (string, error) {
