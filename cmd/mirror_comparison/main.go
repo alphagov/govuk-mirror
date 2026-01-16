@@ -7,7 +7,6 @@ import (
 	"mirrorer/internal/page_comparer"
 	"mirrorer/internal/page_fetcher"
 	"os"
-	"strings"
 	"time"
 
 	"mirrorer/internal/config"
@@ -98,7 +97,7 @@ func comparePages(pages []top_urls.UrlHitCount, baseUrl string) bool {
 			continue
 		}
 
-		same, err := page_comparer.HaveSameBody(strings.NewReader(live), strings.NewReader(mirror))
+		same, err := page_comparer.HaveSameBody(live, mirror)
 		if err != nil {
 			log.Error().Err(err).Msgf("error comparing live and mirror pages: %s", url)
 			failure = true
