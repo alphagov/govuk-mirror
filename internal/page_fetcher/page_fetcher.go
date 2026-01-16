@@ -1,31 +1,42 @@
 package page_fetcher
 
 import (
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 // PageFetcher is used to retrieve pages from GOV.UK, either from the primary mirror or the live site
 type PageFetcher struct {
-	client *http.Client
+	baseUrl *url.URL
+	client  *http.Client
 }
 
-func NewPageFetcher() *PageFetcher {
-	return &PageFetcher{
-		client: &http.Client{},
+func NewPageFetcher(baseUrl string) (*PageFetcher, error) {
+	base, err := url.Parse(baseUrl)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base URL: %s", baseUrl)
 	}
+
+	return &PageFetcher{
+		baseUrl: base,
+		client:  &http.Client{},
+	}, nil
 }
 
-func (pf *PageFetcher) FetchLivePage(url string) (string, error) {
-	return pf.fetchPage(url, "never")
+func (pf *PageFetcher) FetchLivePage(path string) (string, error) {
+	return pf.fetchPage(path, "never")
 }
 
 func (pf *PageFetcher) FetchMirrorPage(path string) (string, error) {
 	return pf.fetchPage(path, "mirrorS3")
 }
 
-func (pf *PageFetcher) fetchPage(url string, backendHeaderValue string) (string, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func (pf *PageFetcher) fetchPage(path string, backendHeaderValue string) (string, error) {
+	reqUrl := pf.baseUrl.JoinPath(path)
+
+	req, err := http.NewRequest("GET", reqUrl.String(), nil)
 	if err != nil {
 		return "", err
 	}

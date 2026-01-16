@@ -49,19 +49,36 @@ func SetupTest(handler http.HandlerFunc) (*httptest.Server, *page_fetcher.PageFe
 			w.WriteHeader(200)
 		}
 	}))
-	fetcher := page_fetcher.NewPageFetcher()
+	fetcher, _ := page_fetcher.NewPageFetcher(server.URL)
 
 	return server, fetcher, received, func() {
 		server.Close()
 	}
 }
+func TestNewPageFetcher(t *testing.T) {
+	t.Run("throws an error if the baseUrl cannot be parsed as a URI", func(t *testing.T) {
+		domain := "%%invalid$url"
+		_, err := page_fetcher.NewPageFetcher(domain)
+		assert.Error(t, err)
+	})
+}
 
 func TestFetchLivePage(t *testing.T) {
+	t.Run("adds the path to the baseUrl to form the request URL", func(t *testing.T) {
+		server, fetcher, requests, teardown := SetupTest(nil)
+		defer teardown()
+
+		_, err := fetcher.FetchLivePage("/page")
+		assert.Nil(t, err)
+
+		assert.Len(t, requests.Get(server.URL+"/page"), 1)
+	})
+
 	t.Run("sets the backend-override header to 'never'", func(t *testing.T) {
 		server, fetcher, requests, teardown := SetupTest(nil)
 		defer teardown()
 
-		_, err := fetcher.FetchLivePage(server.URL + "/page")
+		_, err := fetcher.FetchLivePage("/page")
 		assert.Nil(t, err)
 
 		reqUrl := server.URL + "/page"
@@ -75,35 +92,45 @@ func TestFetchLivePage(t *testing.T) {
 	t.Run("returns the body of the HTTP response", func(t *testing.T) {
 		expectedBody := "Welcome to GOV.UK. "
 
-		server, fetcher, _, teardown := SetupTest(func(w http.ResponseWriter, r *http.Request) {
+		_, fetcher, _, teardown := SetupTest(func(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte(expectedBody))
 			assert.Nil(t, err)
 		})
 		defer teardown()
 
-		body, err := fetcher.FetchLivePage(server.URL + "/page")
+		body, err := fetcher.FetchLivePage("/page")
 		assert.Nil(t, err)
 		assert.Equal(t, expectedBody, body)
 	})
 
 	t.Run("returns an error if the request fails", func(t *testing.T) {
-		server, fetcher, _, teardown := SetupTest(nil)
+		_, fetcher, _, teardown := SetupTest(nil)
 
 		// teardown to close the server before making the request
 		// so that it errors
 		teardown()
 
-		_, err := fetcher.FetchLivePage(server.URL + "/page")
+		_, err := fetcher.FetchLivePage("/page")
 		assert.Error(t, err)
 	})
 }
 
 func TestFetchMirrorPage(t *testing.T) {
+	t.Run("adds the path to the baseUrl to form the request URL", func(t *testing.T) {
+		server, fetcher, requests, teardown := SetupTest(nil)
+		defer teardown()
+
+		_, err := fetcher.FetchMirrorPage("/page")
+		assert.Nil(t, err)
+
+		assert.Len(t, requests.Get(server.URL+"/page"), 1)
+	})
+
 	t.Run("sets the backend-override header to 'mirrorS3'", func(t *testing.T) {
 		server, fetcher, requests, teardown := SetupTest(nil)
 		defer teardown()
 
-		_, err := fetcher.FetchMirrorPage(server.URL + "/page")
+		_, err := fetcher.FetchMirrorPage("/page")
 		assert.Nil(t, err)
 
 		reqUrl := server.URL + "/page"
@@ -117,25 +144,25 @@ func TestFetchMirrorPage(t *testing.T) {
 	t.Run("returns the body of the HTTP response", func(t *testing.T) {
 		expectedBody := "Welcome to the mirror of GOV.UK."
 
-		server, fetcher, _, teardown := SetupTest(func(w http.ResponseWriter, r *http.Request) {
+		_, fetcher, _, teardown := SetupTest(func(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte(expectedBody))
 			assert.Nil(t, err)
 		})
 		defer teardown()
 
-		body, err := fetcher.FetchMirrorPage(server.URL + "/page")
+		body, err := fetcher.FetchMirrorPage("/page")
 		assert.Nil(t, err)
 		assert.Equal(t, expectedBody, body)
 	})
 
 	t.Run("returns an error if the request fails", func(t *testing.T) {
-		server, fetcher, _, teardown := SetupTest(nil)
+		_, fetcher, _, teardown := SetupTest(nil)
 
 		// teardown to close the server before making the request
 		// so that it errors
 		teardown()
 
-		_, err := fetcher.FetchMirrorPage(server.URL + "/page")
+		_, err := fetcher.FetchMirrorPage("/page")
 		assert.Error(t, err)
 	})
 }
