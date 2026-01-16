@@ -12,13 +12,27 @@ import (
 
 // HaveSameBody takes two strings, which it assumes to be HTML, and compares the text in that page which
 // would be visible to a user. If the text is the same, the page bodies are considered to be the same.
-func HaveSameBody(pageA io.Reader, pageB io.Reader) (bool, error) {
-	docA, err := html.Parse(pageA)
+func HaveSameBody(pageA string, pageB string) (bool, error) {
+	if isProbablyJson(pageA) || isProbablyJson(pageB) {
+		checksumA, err := checksum(pageA)
+		if err != nil {
+			return false, err
+		}
+
+		checksumB, err := checksum(pageB)
+		if err != nil {
+			return false, err
+		}
+
+		return checksumA == checksumB, nil
+	}
+
+	docA, err := html.Parse(strings.NewReader(pageA))
 	if err != nil {
 		return false, err
 	}
 
-	docB, err := html.Parse(pageB)
+	docB, err := html.Parse(strings.NewReader(pageB))
 	if err != nil {
 		return false, err
 	}
@@ -89,4 +103,8 @@ func checksum(str string) (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(shaSum.Sum(nil)), nil
+}
+
+func isProbablyJson(str string) bool {
+	return strings.HasPrefix(str, "{") || strings.HasPrefix(str, "[")
 }

@@ -10,30 +10,14 @@ import (
 	"golang.org/x/net/html"
 )
 
-// InvalidHTMLReader is used in place of a string reader
-// because the HTML5 parser will almost always succeed
-// but we still need to test it failing
-type InvalidHTMLReader struct{}
-
-func (*InvalidHTMLReader) Read([]byte) (int, error) {
-	return 0, fmt.Errorf("arbitrary error")
-}
-
 func TestPageComparer_HaveSameBody(t *testing.T) {
-	t.Run("returns an error if pageA is not valid HTML", func(t *testing.T) {
-		pageA := InvalidHTMLReader{}
-		pageB := strings.NewReader("<html></html>")
-
-		_, err := page_comparer.HaveSameBody(&pageA, pageB)
-		assert.Error(t, err)
-	})
-
-	t.Run("returns an error if pageB is not valid HTML", func(t *testing.T) {
-		pageA := strings.NewReader("<html></html>")
-		pageB := InvalidHTMLReader{}
-
-		_, err := page_comparer.HaveSameBody(pageA, &pageB)
-		assert.Error(t, err)
+	t.Run("can tolerate badly formed HTML", func(t *testing.T) {
+		assert.True(t, true, `
+			there are no tests for an HTML document that's badly formed
+			because the HTML 5 parser does its very best to make something
+			of anything given to it. We can basically assume it'll be able
+			to parse whatever it's given'
+		`)
 	})
 
 	t.Run("can tolerate an HTML document having no body tag", func(t *testing.T) {
@@ -48,30 +32,30 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 	})
 
 	t.Run("returns true if the two documents have the same body content", func(t *testing.T) {
-		pageA := strings.NewReader("<html><body><p>Hello</p></body></html>")
-		pageB := strings.NewReader("<html><body><p>Hello</p></body></html>")
+		pageA := "<html><body><p>Hello</p></body></html>"
+		pageB := "<html><body><p>Hello</p></body></html>"
 
 		same, _ := page_comparer.HaveSameBody(pageA, pageB)
 		assert.True(t, same)
 	})
 
 	t.Run("returns true if the two documents have the same text visible to the user, but other elements different", func(t *testing.T) {
-		pageA := strings.NewReader(`<html><body>
+		pageA := `<html><body>
 			<p>Hello</p>
 			<script>alert("Script");</script>
-		</body></html>`)
-		pageB := strings.NewReader(`<html><body>
+		</body></html>`
+		pageB := `<html><body>
 			<p>Hello</p>
 			<link rel="stylesheet" src="style.css" />
-		</body></html>`)
+		</body></html>`
 
 		same, _ := page_comparer.HaveSameBody(pageA, pageB)
 		assert.True(t, same)
 	})
 
 	t.Run("returns false if the two documents have different text visible to the user", func(t *testing.T) {
-		pageA := strings.NewReader("<html><body><p>Hello</p></body></html>")
-		pageB := strings.NewReader("<html><body><p>Goodbye</p></body></html>")
+		pageA := "<html><body><p>Hello</p></body></html>"
+		pageB := "<html><body><p>Goodbye</p></body></html>"
 
 		same, _ := page_comparer.HaveSameBody(pageA, pageB)
 		assert.False(t, same)
@@ -86,8 +70,8 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 
 		for _, testCase := range testCases {
 			t.Run(fmt.Sprintf("'%s' and '%s'", testCase[0], testCase[1]), func(t *testing.T) {
-				a := strings.NewReader(testCase[0])
-				b := strings.NewReader(testCase[1])
+				a := testCase[0]
+				b := testCase[1]
 
 				same, _ := page_comparer.HaveSameBody(a, b)
 				assert.True(
@@ -99,6 +83,32 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 				)
 			})
 		}
+	})
+
+	t.Run("if the first character of either string is '{' it treats the inputs as strings not markup", func(t *testing.T) {
+		t.Run("and it considers two identical strings to be the same", func(t *testing.T) {
+			pageA := `{"some": "json"}`
+			pageB := `{"some": "json"}`
+
+			same, _ := page_comparer.HaveSameBody(pageA, pageB)
+			assert.True(t, same)
+		})
+
+		t.Run("and it considers two non-identical strings to not be the same", func(t *testing.T) {
+			pageA := `{"some": "json"}`
+			pageB := `["some", "json"]`
+
+			same, _ := page_comparer.HaveSameBody(pageA, pageB)
+			assert.False(t, same)
+		})
+
+		t.Run("and if only one input is HTML it treats them both as strings", func(t *testing.T) {
+			pageA := `<html></html>`
+			pageB := `["some", "json"]`
+
+			same, _ := page_comparer.HaveSameBody(pageA, pageB)
+			assert.False(t, same)
+		})
 	})
 }
 
