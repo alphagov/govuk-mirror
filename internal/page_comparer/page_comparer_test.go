@@ -1,0 +1,88 @@
+package page_comparer_test
+
+import (
+	"fmt"
+	"mirrorer/internal/page_comparer"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+// InvalidHTMLReader is used in place of a string reader
+// because the HTML5 parser will almost always succeed
+// but we still need to test it failing
+type InvalidHTMLReader struct{}
+
+func (*InvalidHTMLReader) Read([]byte) (int, error) {
+	return 0, fmt.Errorf("arbitrary error")
+}
+
+func TestPageComparer_HaveSameBody(t *testing.T) {
+	t.Run("returns an error if pageA is not valid HTML", func(t *testing.T) {
+		pageA := InvalidHTMLReader{}
+		pageB := strings.NewReader("<html></html>")
+
+		_, err := page_comparer.HaveSameBody(&pageA, pageB)
+		assert.Error(t, err)
+	})
+
+	t.Run("returns an error if pageB is not valid HTML", func(t *testing.T) {
+		pageA := strings.NewReader("<html></html>")
+		pageB := InvalidHTMLReader{}
+
+		_, err := page_comparer.HaveSameBody(pageA, &pageB)
+		assert.Error(t, err)
+	})
+
+	t.Run("can tolerate an HTML document having no body tag", func(t *testing.T) {
+		assert.True(t, true, `
+			there are no tests for an HTML document that doesn't
+			contain a body tag because the HTML parser will
+			implicitly create nodes like body or head when they
+			are needed to make a working document
+
+			see the comments on the function html.Parse
+		`)
+	})
+
+	t.Run("returns true if the two documents have the same body content", func(t *testing.T) {
+		pageA := strings.NewReader("<html><body><p>Hello</p></body></html>")
+		pageB := strings.NewReader("<html><body><p>Hello</p></body></html>")
+
+		same, _ := page_comparer.HaveSameBody(pageA, pageB)
+		assert.True(t, same)
+	})
+
+	t.Run("returns false if the two documents have the same body content", func(t *testing.T) {
+		pageA := strings.NewReader("<html><body><p>Hello</p></body></html>")
+		pageB := strings.NewReader("<html><body><p>Goodbye</p></body></html>")
+
+		same, _ := page_comparer.HaveSameBody(pageA, pageB)
+		assert.False(t, same)
+	})
+
+	t.Run("always returns true for two documents which would have the same body content when parsed", func(t *testing.T) {
+		testCases := [][]string{
+			{"hello", "<body>hello</body>"},
+			{"<p>hello</p>", "<body><p>hello</p></body>"},
+			{"", "<html><head><title>empty</title></head></html>"},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(fmt.Sprintf("'%s' and '%s'", testCase[0], testCase[1]), func(t *testing.T) {
+				a := strings.NewReader(testCase[0])
+				b := strings.NewReader(testCase[1])
+
+				same, _ := page_comparer.HaveSameBody(a, b)
+				assert.True(
+					t,
+					same,
+					"expected two documents to end up with the same body contents; '%s' and '%s'",
+					testCase[0],
+					testCase[1],
+				)
+			})
+		}
+	})
+}
