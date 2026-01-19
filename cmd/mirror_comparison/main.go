@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
+	"mirrorer/internal/drift_checker"
 	"mirrorer/internal/page_comparer"
 	"mirrorer/internal/page_fetcher"
 	"os"
@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/athena"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/rs/zerolog/log"
+	"github.com/slack-go/slack"
 )
 
 func main() {
@@ -48,69 +49,27 @@ func main() {
 		log.Fatal().Err(err).Msg("Error generating top urls")
 	}
 
-	// maintain exit code because we want a non-zero exit code if we detect drift or encounter
-	// an error, but we don't want to stop processing until we're done
-	exitCode := 0
-
-	log.Info().Msgf("Comparing top %d unsampled paths", len(urls.TopUnsampledUrls))
-	failure := comparePages(urls.TopUnsampledUrls, cfg.Site)
-	if failure {
-		exitCode = 1
-	}
-
-	log.Info().Msgf("Comparing remaining %d sampled paths", len(urls.RemainingSampledUrls))
-	failure = comparePages(urls.RemainingSampledUrls, cfg.Site)
-	if failure {
-		exitCode = 1
-	}
-
-	os.Exit(exitCode)
-}
-
-// comparePages runs through each of the URLs and compares their
-// live and mirror versions.
-//
-// Returns true if there was an error so that the program can exit with
-// a non-zero exit code. Does not return the error, because the errors are logged.
-func comparePages(pages []top_urls.UrlHitCount, baseUrl string) bool {
-	failure := false
-	fetcher, err := page_fetcher.NewPageFetcher(baseUrl)
+	fetcher, err := page_fetcher.NewPageFetcher(cfg.Site)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating page fetcher")
-		return true
 	}
 
-	for _, page := range pages {
-		url := page.ViewedUrl.String()
-
-		live, err := fetcher.FetchLivePage(url)
-		if err != nil {
-			log.Error().Err(err).Msgf("error fetching live page: %s", url)
-			failure = true
-			continue
-		}
-
-		mirror, err := fetcher.FetchMirrorPage(url)
-		if err != nil {
-			log.Error().Err(err).Msgf("error fetching mirror page: %s", url)
-			failure = true
-			continue
-		}
-
-		same, err := page_comparer.HaveSameBody(live, mirror)
-		if err != nil {
-			log.Error().Err(err).Msgf("error comparing live and mirror pages: %s", url)
-			failure = true
-			continue
-		}
-
-		if !same {
-			log.Info().Err(fmt.Errorf("drift detected between live and mirror on %s", url))
-			failure = true
-		}
-
-		log.Info().Bool("drift", !same).Msgf("Comparing %s (%d views)", url, page.ViewCount)
+	comparer := page_comparer.PageComparer{}
+	
+	var notifier drift_checker.DriftNotifierInterface
+	if cfg.HasSlackCredentials() {
+		log.Info().Msg("Using Slack credentials. Will notify about drifts on Slack")
+		notifier = drift_checker.NewSlackDriftNotifier(slack.New(cfg.SlackApiToken), cfg.SlackChannelId)
+	} else {
+		log.Info().Msg("No Slack credentials found. Will notify about drifts on stdout")
+		notifier = drift_checker.StdOutDriftNotifier{}
 	}
 
-	return failure
+	driftsDetected := drift_checker.CheckPagesForDrift(urls, fetcher, &comparer, notifier)
+
+	if driftsDetected {
+		os.Exit(1)
+	} else {
+		os.Exit(0)
+	}
 }
