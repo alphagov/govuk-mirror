@@ -12,7 +12,9 @@ require (
 	github.com/gocolly/colly/v2 v2.3.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rs/zerolog v1.34.0
+	github.com/slack-go/slack v0.17.3
 	github.com/stretchr/testify v1.11.1
+	golang.org/x/net v0.47.0
 )
 
 require (
@@ -43,6 +45,7 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
@@ -59,7 +62,6 @@ require (
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/mod v0.29.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
