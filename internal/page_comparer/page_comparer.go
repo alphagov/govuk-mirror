@@ -10,9 +10,16 @@ import (
 	"golang.org/x/net/html"
 )
 
+//counterfeiter:generate -o ./fakes/ . PageComparerInterface
+type PageComparerInterface interface {
+	HaveSameBody(pageA string, pageB string) (bool, error)
+}
+
+type PageComparer struct{}
+
 // HaveSameBody takes two strings, which it assumes to be HTML, and compares the text in that page which
 // would be visible to a user. If the text is the same, the page bodies are considered to be the same.
-func HaveSameBody(pageA string, pageB string) (bool, error) {
+func (*PageComparer) HaveSameBody(pageA string, pageB string) (bool, error) {
 	if isProbablyJson(pageA) || isProbablyJson(pageB) {
 		checksumA, err := checksum(pageA)
 		if err != nil {

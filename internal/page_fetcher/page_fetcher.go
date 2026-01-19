@@ -7,6 +7,12 @@ import (
 	"net/url"
 )
 
+//counterfeiter:generate -o ./fakes/ . PageFetcherInterface
+type PageFetcherInterface interface {
+	FetchLivePage(path string) (string, error)
+	FetchMirrorPage(path string) (string, error)
+}
+
 // PageFetcher is used to retrieve pages from GOV.UK, either from the primary mirror or the live site
 type PageFetcher struct {
 	baseUrl *url.URL

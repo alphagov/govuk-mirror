@@ -11,6 +11,7 @@ import (
 )
 
 func TestPageComparer_HaveSameBody(t *testing.T) {
+	comparer := page_comparer.PageComparer{}
 	t.Run("can tolerate badly formed HTML", func(t *testing.T) {
 		assert.True(t, true, `
 			there are no tests for an HTML document that's badly formed
@@ -35,7 +36,7 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 		pageA := "<html><body><p>Hello</p></body></html>"
 		pageB := "<html><body><p>Hello</p></body></html>"
 
-		same, _ := page_comparer.HaveSameBody(pageA, pageB)
+		same, _ := comparer.HaveSameBody(pageA, pageB)
 		assert.True(t, same)
 	})
 
@@ -49,7 +50,7 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 			<link rel="stylesheet" src="style.css" />
 		</body></html>`
 
-		same, _ := page_comparer.HaveSameBody(pageA, pageB)
+		same, _ := comparer.HaveSameBody(pageA, pageB)
 		assert.True(t, same)
 	})
 
@@ -57,7 +58,7 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 		pageA := "<html><body><p>Hello</p></body></html>"
 		pageB := "<html><body><p>Goodbye</p></body></html>"
 
-		same, _ := page_comparer.HaveSameBody(pageA, pageB)
+		same, _ := comparer.HaveSameBody(pageA, pageB)
 		assert.False(t, same)
 	})
 
@@ -73,7 +74,7 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 				a := testCase[0]
 				b := testCase[1]
 
-				same, _ := page_comparer.HaveSameBody(a, b)
+				same, _ := comparer.HaveSameBody(a, b)
 				assert.True(
 					t,
 					same,
@@ -90,7 +91,7 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 			pageA := `{"some": "json"}`
 			pageB := `{"some": "json"}`
 
-			same, _ := page_comparer.HaveSameBody(pageA, pageB)
+			same, _ := comparer.HaveSameBody(pageA, pageB)
 			assert.True(t, same)
 		})
 
@@ -98,7 +99,7 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 			pageA := `{"some": "json"}`
 			pageB := `["some", "json"]`
 
-			same, _ := page_comparer.HaveSameBody(pageA, pageB)
+			same, _ := comparer.HaveSameBody(pageA, pageB)
 			assert.False(t, same)
 		})
 
@@ -106,7 +107,7 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 			pageA := `<html></html>`
 			pageB := `["some", "json"]`
 
-			same, _ := page_comparer.HaveSameBody(pageA, pageB)
+			same, _ := comparer.HaveSameBody(pageA, pageB)
 			assert.False(t, same)
 		})
 	})
