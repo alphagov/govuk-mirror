@@ -13,23 +13,26 @@ import (
 func TestPageComparer_HaveSameBody(t *testing.T) {
 	comparer := page_comparer.PageComparer{}
 	t.Run("can tolerate badly formed HTML", func(t *testing.T) {
-		assert.True(t, true, `
-			there are no tests for an HTML document that's badly formed
-			because the HTML 5 parser does its very best to make something
-			of anything given to it. We can basically assume it'll be able
-			to parse whatever it's given'
-		`)
+		// the HTML 5 parser does its very best to make something
+		// of anything given to it. We can basically assume it'll be able
+		// to parse whatever it's given. This test is a very simple
+		// demonstration of that.
+		body := "<html <body"
+		same, err := comparer.HaveSameBody(body, body)
+		assert.NoError(t, err)
+		assert.True(t, same)
 	})
 
 	t.Run("can tolerate an HTML document having no body tag", func(t *testing.T) {
-		assert.True(t, true, `
-			there are no tests for an HTML document that doesn't
-			contain a body tag because the HTML parser will
-			implicitly create nodes like body or head when they
-			are needed to make a working document
-
-			see the comments on the function html.Parse
-		`)
+		// the HTML parser will
+		// implicitly create nodes like body or head when they
+		// are needed to make a working document
+		//
+		// see the comments on the function html.Parse
+		body := "<html><head><title>Hello!</title></head></html>"
+		same, err := comparer.HaveSameBody(body, body)
+		assert.NoError(t, err)
+		assert.True(t, same)
 	})
 
 	t.Run("returns true if the two documents have the same body content", func(t *testing.T) {
