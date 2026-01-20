@@ -25,7 +25,8 @@ func (s SlackDriftNotifier) Notify(summary DriftSummary) error {
 	Drifts detected: %d
 	Errors encountered: %d
 
-	Look at the logs in Logit to find out more
+	Look at the logs in Logit to find out more.
+	Search "kubernetes.labels.app_kubernetes_io\/name: mirror-drift-check"
 	`,
 		summary.NumPagesCompared,
 		summary.NumDriftsDetected,
