@@ -5,8 +5,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	"golang.org/x/net/html"
 )
 
@@ -73,21 +75,23 @@ func ExtractVisibleTextFromHTML(node *html.Node) string {
 
 	// Recursive function to traverse the tree
 	extractText = func(n *html.Node) {
-		// Ignore head, style, link, script etc
-		// Don't descend into them
-		if n.Type == html.ElementNode {
-			switch n.Data {
-			case "head", "meta", "style", "link", "script":
+		switch n.Type {
+		case html.ElementNode:
+			// Ignore head, style, link, script etc
+			// Don't descend into them
+			if slices.Contains([]string{"head", "meta", "style", "link", "script"}, n.Data) {
 				return
 			}
-		}
 
 		// Text nodes contain text visible on the screen
-		if n.Type == html.TextNode {
+		case html.TextNode:
 			text := strings.TrimSpace(n.Data)
 			if text != "" {
 				output.WriteString(text + "\n")
 			}
+
+		default:
+			log.Info().Any("node_type", n.Type).Msg("encountered an unexpected node type when descending the DOM tree")
 		}
 
 		// Recursively process child nodes
