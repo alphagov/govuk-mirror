@@ -8,4 +8,5 @@ type DriftNotifierInterface interface {
 type DriftSummary struct {
 	NumPagesCompared  int
 	NumDriftsDetected int
+	NumErrors         int
 }

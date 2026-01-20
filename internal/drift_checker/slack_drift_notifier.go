@@ -23,11 +23,13 @@ func (s SlackDriftNotifier) Notify(summary DriftSummary) error {
 	Drifts were detected beween the live and mirror versions of pages on GOV.UK
 	Pages tested: %d
 	Drifts detected: %d
+	Errors encountered: %d
 
 	Look at the logs in Logit to find out more
 	`,
 		summary.NumPagesCompared,
 		summary.NumDriftsDetected,
+		summary.NumErrors,
 	)
 	msg := slack.MsgOptionText(txt, false)
 

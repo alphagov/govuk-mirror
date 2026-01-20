@@ -1,6 +1,7 @@
 package drift_checker_test
 
 import (
+	"errors"
 	"mirrorer/internal/drift_checker"
 	notifier_fakes "mirrorer/internal/drift_checker/fakes"
 	page_comparer_fakes "mirrorer/internal/page_comparer/fakes"
@@ -174,5 +175,43 @@ func TestDriftChecker(t *testing.T) {
 		summary := notifier.NotifyArgsForCall(0)
 		assert.Equal(t, 2, summary.NumPagesCompared)
 		assert.Equal(t, 1, summary.NumDriftsDetected)
+	})
+
+	t.Run("if there are any drifts, the summary includes the number of errors encountered during comparisons", func(t *testing.T) {
+		urls := &top_urls.TopUrls{
+			TopUnsampledUrls: []top_urls.UrlHitCount{
+				{
+					ViewedUrl: asUrl("/page-1"),
+					ViewCount: 100,
+				},
+			},
+			RemainingSampledUrls: []top_urls.UrlHitCount{
+				{
+					ViewedUrl: asUrl("/page-2"),
+					ViewCount: 10,
+				},
+				{
+					ViewedUrl: asUrl("/page-3"),
+					ViewCount: 5,
+				},
+			},
+		}
+
+		fetcher := page_fetcher_fakes.FakePageFetcherInterface{}
+		comparer := page_comparer_fakes.FakePageComparerInterface{}
+		notifier := notifier_fakes.FakeDriftNotifierInterface{}
+
+		fetcher.FetchLivePageReturns("str", nil)
+		fetcher.FetchMirrorPageReturns("str", nil)
+
+		comparer.HaveSameBodyReturnsOnCall(0, false, nil)
+		comparer.HaveSameBodyReturnsOnCall(1, true, nil)
+		comparer.HaveSameBodyReturnsOnCall(2, false, errors.New("failed to compare"))
+
+		_ = drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier)
+
+		assert.Equal(t, 1, notifier.NotifyCallCount())
+		summary := notifier.NotifyArgsForCall(0)
+		assert.Equal(t, 1, summary.NumErrors)
 	})
 }

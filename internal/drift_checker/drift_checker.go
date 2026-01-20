@@ -20,18 +20,15 @@ func CheckPagesForDrift(
 	comparer page_comparer.PageComparerInterface,
 	notifier DriftNotifierInterface,
 ) bool {
+	summary := DriftSummary{}
+
 	log.Info().Msgf("Comparing top %d unsampled paths", len(urls.TopUnsampledUrls))
-	topDriftsDetected, topComparisonsPerformed := comparePages(urls.TopUnsampledUrls, fetcher, comparer)
+	comparePages(urls.TopUnsampledUrls, fetcher, comparer, &summary)
 
 	log.Info().Msgf("Comparing remaining %d sampled paths", len(urls.RemainingSampledUrls))
-	restDriftsDetected, restComparisonsPerformed := comparePages(urls.RemainingSampledUrls, fetcher, comparer)
+	comparePages(urls.RemainingSampledUrls, fetcher, comparer, &summary)
 
-	driftsDetected := topDriftsDetected + restDriftsDetected
-	if driftsDetected > 0 {
-		summary := DriftSummary{
-			NumDriftsDetected: driftsDetected,
-			NumPagesCompared:  topComparisonsPerformed + restComparisonsPerformed,
-		}
+	if summary.NumDriftsDetected > 0 {
 		err := notifier.Notify(summary)
 		if err != nil {
 			log.Error().Err(err).Msgf("failed to send drift summary notification")
@@ -44,45 +41,43 @@ func CheckPagesForDrift(
 // comparePages runs through each of the URLs and compares their
 // live and mirror versions.
 //
-// Returns the number of drifts that were detected among the URLs,
-// and the total number of comparisons performed
+// Increments the counts on the supplied summary struct
 func comparePages(
 	pages []top_urls.UrlHitCount,
 	fetcher page_fetcher.PageFetcherInterface,
 	comparer page_comparer.PageComparerInterface,
-) (int, int) {
-	drifts := 0
-	comparisons := 0
-
+	summary *DriftSummary,
+) {
 	for _, page := range pages {
 		url := page.ViewedUrl.String()
 
 		live, err := fetcher.FetchLivePage(url)
 		if err != nil {
 			log.Error().Err(err).Msgf("error fetching live page: %s", url)
+			summary.NumErrors++
 			continue
 		}
 
 		mirror, err := fetcher.FetchMirrorPage(url)
 		if err != nil {
 			log.Error().Err(err).Msgf("error fetching mirror page: %s", url)
+			summary.NumErrors++
 			continue
 		}
 
 		same, err := comparer.HaveSameBody(live, mirror)
-		comparisons++
+		summary.NumPagesCompared++
 		if err != nil {
 			log.Error().Err(err).Msgf("error comparing live and mirror pages: %s", url)
+			summary.NumErrors++
 			continue
 		}
 
 		if !same {
 			log.Info().Err(fmt.Errorf("drift detected between live and mirror on %s", url))
-			drifts++
+			summary.NumDriftsDetected++
 		}
 
 		log.Info().Bool("drift", !same).Msgf("Comparing %s (%d views)", url, page.ViewCount)
 	}
-
-	return drifts, comparisons
 }
