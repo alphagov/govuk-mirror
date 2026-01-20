@@ -172,7 +172,7 @@ func TestExtractVisibleTextFromHTML(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			node, err := html.Parse(strings.NewReader(tt.htmlInput))
-			assert.Nil(t, err, "failed to parse input HTML: %s", tt.htmlInput)
+			assert.NoError(t, err, "failed to parse input HTML: %s", tt.htmlInput)
 
 			actual := page_comparer.ExtractVisibleTextFromHTML(node)
 			assert.Equal(t, actual, tt.expected)

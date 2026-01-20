@@ -69,7 +69,7 @@ func TestFetchLivePage(t *testing.T) {
 		defer teardown()
 
 		_, err := fetcher.FetchLivePage("/page")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		assert.Len(t, requests.Get(server.URL+"/page"), 1)
 	})
@@ -79,7 +79,7 @@ func TestFetchLivePage(t *testing.T) {
 		defer teardown()
 
 		_, err := fetcher.FetchLivePage("/page")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		reqUrl := server.URL + "/page"
 		assert.Len(t, requests.Get(reqUrl), 1)
@@ -94,12 +94,12 @@ func TestFetchLivePage(t *testing.T) {
 
 		_, fetcher, _, teardown := SetupTest(func(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte(expectedBody))
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 		})
 		defer teardown()
 
 		body, err := fetcher.FetchLivePage("/page")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, expectedBody, body)
 	})
 
@@ -121,7 +121,7 @@ func TestFetchMirrorPage(t *testing.T) {
 		defer teardown()
 
 		_, err := fetcher.FetchMirrorPage("/page")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		assert.Len(t, requests.Get(server.URL+"/page"), 1)
 	})
@@ -131,7 +131,7 @@ func TestFetchMirrorPage(t *testing.T) {
 		defer teardown()
 
 		_, err := fetcher.FetchMirrorPage("/page")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		reqUrl := server.URL + "/page"
 		assert.Len(t, requests.Get(reqUrl), 1)
@@ -146,12 +146,12 @@ func TestFetchMirrorPage(t *testing.T) {
 
 		_, fetcher, _, teardown := SetupTest(func(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte(expectedBody))
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 		})
 		defer teardown()
 
 		body, err := fetcher.FetchMirrorPage("/page")
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, expectedBody, body)
 	})
 
