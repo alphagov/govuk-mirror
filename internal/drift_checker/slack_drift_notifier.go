@@ -1,20 +1,21 @@
 package drift_checker
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
-
-	"github.com/slack-go/slack"
+	"net/http"
+	"net/url"
 )
 
 type SlackDriftNotifier struct {
-	client    *slack.Client
-	channelId string
+	webhookUrl url.URL
 }
 
-func NewSlackDriftNotifier(client *slack.Client, channelId string) *SlackDriftNotifier {
+func NewSlackDriftNotifier(webhookUrl url.URL) *SlackDriftNotifier {
 	return &SlackDriftNotifier{
-		client:    client,
-		channelId: channelId,
+		webhookUrl: webhookUrl,
 	}
 }
 
@@ -32,8 +33,28 @@ func (s SlackDriftNotifier) Notify(summary DriftSummary) error {
 		summary.NumDriftsDetected,
 		summary.NumErrors,
 	)
-	msg := slack.MsgOptionText(txt, false)
 
-	_, _, err := s.client.PostMessage(s.channelId, msg)
-	return err
+	client := &http.Client{}
+	jsonFields := map[string]interface{}{
+		"text": txt,
+	}
+	body, err := json.Marshal(jsonFields)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.Post(s.webhookUrl.String(), "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+
+	defer (func() {
+		_ = resp.Body.Close()
+	})()
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("unexpected status code: " + resp.Status)
+	}
+
+	return nil
 }

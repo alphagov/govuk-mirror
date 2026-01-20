@@ -12,8 +12,7 @@ type MirrorComparisonConfig struct {
 	Site                         string `env:"SITE"`
 	CompareTopUnsampledCount     int    `env:"COMPARE_TOP_UNSAMPLED_COUNT" envDefault:"100"`
 	CompareRemainingSampledCount int    `env:"COMPARE_REMAINING_SAMPLED_COUNT" envDefault:"100"`
-	SlackApiToken                string `env:"SLACK_API_TOKEN" envDefault:""`
-	SlackChannelId               string `env:"SLACK_CHANNEL_ID" envDefault:""`
+	SlackWebhook                 string `env:"SLACK_WEBHOOK" envDefault:""`
 }
 
 func NewMirrorComparisonConfig() (*MirrorComparisonConfig, error) {
@@ -27,19 +26,37 @@ func NewMirrorComparisonConfig() (*MirrorComparisonConfig, error) {
 }
 
 func (mcc *MirrorComparisonConfig) Validate() error {
+	if strings.TrimSpace(mcc.Site) == "" {
+		return errors.New("site is required")
+	}
+
 	_, err := url.Parse(mcc.Site)
 	if err != nil {
 		return err
 	}
 
-	if (strings.TrimSpace(mcc.SlackApiToken) != "" && strings.TrimSpace(mcc.SlackChannelId) == "") ||
-		(strings.TrimSpace(mcc.SlackApiToken) == "" && strings.TrimSpace(mcc.SlackChannelId) != "") {
-		return errors.New("the Slack API token and Slack channel id must be provided together, or not at all")
+	if strings.TrimSpace(mcc.SlackWebhook) == "" {
+		return errors.New("slack webhook is required")
+	}
+
+	_, err = url.Parse(mcc.SlackWebhook)
+	if err != nil {
+		return errors.New("slack webhook must be a valid URL")
 	}
 
 	return nil
 }
 
-func (mcc *MirrorComparisonConfig) HasSlackCredentials() bool {
-	return strings.TrimSpace(mcc.SlackApiToken) != "" && strings.TrimSpace(mcc.SlackChannelId) != ""
+func (mcc *MirrorComparisonConfig) HasSlackSettings() bool {
+	if strings.TrimSpace(mcc.SlackWebhook) == "" {
+		return false
+	}
+	
+	_, err := url.Parse(mcc.SlackWebhook)
+	return err == nil
+}
+
+func (mcc *MirrorComparisonConfig) SlackWebhookURL() url.URL {
+	u, _ := url.Parse(mcc.SlackWebhook)
+	return *u
 }

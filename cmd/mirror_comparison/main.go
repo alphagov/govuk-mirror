@@ -17,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/athena"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/rs/zerolog/log"
-	"github.com/slack-go/slack"
 )
 
 func main() {
@@ -55,11 +54,11 @@ func main() {
 	}
 
 	comparer := page_comparer.PageComparer{}
-	
+
 	var notifier drift_checker.DriftNotifierInterface
-	if cfg.HasSlackCredentials() {
+	if cfg.HasSlackSettings() {
 		log.Info().Msg("Using Slack credentials. Will notify about drifts on Slack")
-		notifier = drift_checker.NewSlackDriftNotifier(slack.New(cfg.SlackApiToken), cfg.SlackChannelId)
+		notifier = drift_checker.NewSlackDriftNotifier(cfg.SlackWebhookURL())
 	} else {
 		log.Info().Msg("No Slack credentials found. Will notify about drifts on stdout")
 		notifier = drift_checker.StdOutDriftNotifier{}

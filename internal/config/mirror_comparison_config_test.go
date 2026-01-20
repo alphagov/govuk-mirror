@@ -18,65 +18,49 @@ func TestMirrorComparisonConfig_Validate(t *testing.T) {
 		assert.Error(t, cfg.Validate())
 	})
 
-	t.Run("config is invalid if SlackApiToken is provided but SlackChannelId is not", func(t *testing.T) {
+	t.Run("config is invalid if SlackWebhook is not provided", func(t *testing.T) {
 		cfg := config.MirrorComparisonConfig{
 			Site:                         "https://gov.uk",
 			CompareTopUnsampledCount:     0,
 			CompareRemainingSampledCount: 0,
-			SlackApiToken:                "token",
-			SlackChannelId:               "",
+			SlackWebhook:                 "",
+		}
+
+		assert.Error(t, cfg.Validate())
+	})
+
+	t.Run("config is invalid if SlackWebhook is provided but is not a valid URL", func(t *testing.T) {
+		cfg := config.MirrorComparisonConfig{
+			Site:                         "https://gov.uk",
+			CompareTopUnsampledCount:     0,
+			CompareRemainingSampledCount: 0,
+			SlackWebhook:                 "$$invalid%url",
 		}
 
 		assert.Error(t, cfg.Validate())
 	})
 }
 
-func TestMirrorComparisonConfig_HasSlackCredentials(t *testing.T) {
-	t.Run("true if API token and channel id are set", func(t *testing.T) {
+func TestMirrorComparisonConfig_HasSlackSettings(t *testing.T) {
+	t.Run("true if SlackWebhook is set", func(t *testing.T) {
 		cfg := config.MirrorComparisonConfig{
 			Site:                         "https://gov.uk",
 			CompareTopUnsampledCount:     0,
 			CompareRemainingSampledCount: 0,
-			SlackApiToken:                "token",
-			SlackChannelId:               "channel",
+			SlackWebhook:                 "webhook",
 		}
 
-		assert.True(t, cfg.HasSlackCredentials())
+		assert.True(t, cfg.HasSlackSettings())
 	})
 
-	t.Run("false if API token is not set", func(t *testing.T) {
+	t.Run("false if SlackWebhook is not set", func(t *testing.T) {
 		cfg := config.MirrorComparisonConfig{
 			Site:                         "https://gov.uk",
 			CompareTopUnsampledCount:     0,
 			CompareRemainingSampledCount: 0,
-			SlackApiToken:                "",
-			SlackChannelId:               "channel",
+			SlackWebhook:                 "",
 		}
 
-		assert.False(t, cfg.HasSlackCredentials())
-	})
-
-	t.Run("false if SlackChannelId is not set", func(t *testing.T) {
-		cfg := config.MirrorComparisonConfig{
-			Site:                         "https://gov.uk",
-			CompareTopUnsampledCount:     0,
-			CompareRemainingSampledCount: 0,
-			SlackApiToken:                "token",
-			SlackChannelId:               "",
-		}
-
-		assert.False(t, cfg.HasSlackCredentials())
-	})
-
-	t.Run("false if neither token nor channel id are set", func(t *testing.T) {
-		cfg := config.MirrorComparisonConfig{
-			Site:                         "https://gov.uk",
-			CompareTopUnsampledCount:     0,
-			CompareRemainingSampledCount: 0,
-			SlackApiToken:                "",
-			SlackChannelId:               "",
-		}
-
-		assert.False(t, cfg.HasSlackCredentials())
+		assert.False(t, cfg.HasSlackSettings())
 	})
 }
