@@ -3,6 +3,7 @@ package page_comparer_test
 import (
 	"fmt"
 	"mirrorer/internal/page_comparer"
+	"mirrorer/internal/page_fetcher"
 	"strings"
 	"testing"
 
@@ -10,107 +11,170 @@ import (
 	"golang.org/x/net/html"
 )
 
+func htmlPage(body string) page_fetcher.Page {
+	return page_fetcher.Page{
+		Body:        body,
+		ContentType: "text/html",
+	}
+}
+
+func jsonPage(body string) page_fetcher.Page {
+	return page_fetcher.Page{
+		Body:        body,
+		ContentType: "application/json; charset=utf-8",
+	}
+}
+
 func TestPageComparer_HaveSameBody(t *testing.T) {
 	comparer := page_comparer.PageComparer{}
-	t.Run("can tolerate badly formed HTML", func(t *testing.T) {
-		// the HTML 5 parser does its very best to make something
-		// of anything given to it. We can basically assume it'll be able
-		// to parse whatever it's given. This test is a very simple
-		// demonstration of that.
-		body := "<html <body"
-		same, err := comparer.HaveSameBody(body, body)
-		assert.NoError(t, err)
-		assert.True(t, same)
-	})
 
-	t.Run("can tolerate an HTML document having no body tag", func(t *testing.T) {
-		// the HTML parser will
-		// implicitly create nodes like body or head when they
-		// are needed to make a working document
-		//
-		// see the comments on the function html.Parse
-		body := "<html><head><title>Hello!</title></head></html>"
-		same, err := comparer.HaveSameBody(body, body)
-		assert.NoError(t, err)
-		assert.True(t, same)
-	})
+	t.Run("when the content type is text/html", func(t *testing.T) {
+		t.Run("can tolerate badly formed HTML", func(t *testing.T) {
+			// the HTML 5 parser does its very best to make something
+			// of anything given to it. We can basically assume it'll be able
+			// to parse whatever it's given. This test is a very simple
+			// demonstration of that.
+			body := "<html <body"
+			same, err := comparer.HaveSameBody(htmlPage(body), htmlPage(body))
+			assert.NoError(t, err)
+			assert.True(t, same)
+		})
 
-	t.Run("returns true if the two documents have the same body content", func(t *testing.T) {
-		pageA := "<html><body><p>Hello</p></body></html>"
-		pageB := "<html><body><p>Hello</p></body></html>"
+		t.Run("can tolerate an HTML document having no body tag", func(t *testing.T) {
+			// the HTML parser will
+			// implicitly create nodes like body or head when they
+			// are needed to make a working document
+			//
+			// see the comments on the function html.Parse
+			body := "<html><head><title>Hello!</title></head></html>"
+			same, err := comparer.HaveSameBody(htmlPage(body), htmlPage(body))
+			assert.NoError(t, err)
+			assert.True(t, same)
+		})
 
-		same, _ := comparer.HaveSameBody(pageA, pageB)
-		assert.True(t, same)
-	})
+		t.Run("returns true if the two documents have the same body content", func(t *testing.T) {
+			pageA := "<html><body><p>Hello</p></body></html>"
+			pageB := "<html><body><p>Hello</p></body></html>"
 
-	t.Run("returns true if the two documents have the same text visible to the user, but other elements different", func(t *testing.T) {
-		pageA := `<html><body>
+			same, _ := comparer.HaveSameBody(htmlPage(pageA), htmlPage(pageB))
+			assert.True(t, same)
+		})
+
+		t.Run("returns true if the two documents have the same text visible to the user, but other elements different", func(t *testing.T) {
+			pageA := `<html><body>
 			<p>Hello</p>
 			<script>alert("Script");</script>
 		</body></html>`
-		pageB := `<html><body>
+			pageB := `<html><body>
 			<p>Hello</p>
 			<link rel="stylesheet" src="style.css" />
 		</body></html>`
 
-		same, _ := comparer.HaveSameBody(pageA, pageB)
-		assert.True(t, same)
-	})
-
-	t.Run("returns false if the two documents have different text visible to the user", func(t *testing.T) {
-		pageA := "<html><body><p>Hello</p></body></html>"
-		pageB := "<html><body><p>Goodbye</p></body></html>"
-
-		same, _ := comparer.HaveSameBody(pageA, pageB)
-		assert.False(t, same)
-	})
-
-	t.Run("always returns true for two documents which would have the same body content when parsed", func(t *testing.T) {
-		testCases := [][]string{
-			{"hello", "<body>hello</body>"},
-			{"<p>hello</p>", "<body><p>hello</p></body>"},
-			{"", "<html><head><title>empty</title></head></html>"},
-		}
-
-		for _, testCase := range testCases {
-			t.Run(fmt.Sprintf("'%s' and '%s'", testCase[0], testCase[1]), func(t *testing.T) {
-				a := testCase[0]
-				b := testCase[1]
-
-				same, _ := comparer.HaveSameBody(a, b)
-				assert.True(
-					t,
-					same,
-					"expected two documents to end up with the same body contents; '%s' and '%s'",
-					testCase[0],
-					testCase[1],
-				)
-			})
-		}
-	})
-
-	t.Run("if the first character of either string is '{' it treats the inputs as strings not markup", func(t *testing.T) {
-		t.Run("and it considers two identical strings to be the same", func(t *testing.T) {
-			pageA := `{"some": "json"}`
-			pageB := `{"some": "json"}`
-
-			same, _ := comparer.HaveSameBody(pageA, pageB)
+			same, _ := comparer.HaveSameBody(htmlPage(pageA), htmlPage(pageB))
 			assert.True(t, same)
 		})
 
-		t.Run("and it considers two non-identical strings to not be the same", func(t *testing.T) {
-			pageA := `{"some": "json"}`
-			pageB := `["some", "json"]`
+		t.Run("returns false if the two documents have different text visible to the user", func(t *testing.T) {
+			pageA := "<html><body><p>Hello</p></body></html>"
+			pageB := "<html><body><p>Goodbye</p></body></html>"
 
-			same, _ := comparer.HaveSameBody(pageA, pageB)
+			same, _ := comparer.HaveSameBody(htmlPage(pageA), htmlPage(pageB))
 			assert.False(t, same)
 		})
 
-		t.Run("and if only one input is HTML it treats them both as strings", func(t *testing.T) {
-			pageA := `<html></html>`
-			pageB := `["some", "json"]`
+		t.Run("always returns true for two documents which would have the same body content when parsed", func(t *testing.T) {
+			testCases := [][]string{
+				{"hello", "<body>hello</body>"},
+				{"<p>hello</p>", "<body><p>hello</p></body>"},
+				{"", "<html><head><title>empty</title></head></html>"},
+			}
 
-			same, _ := comparer.HaveSameBody(pageA, pageB)
+			for _, testCase := range testCases {
+				t.Run(fmt.Sprintf("'%s' and '%s'", testCase[0], testCase[1]), func(t *testing.T) {
+					a := testCase[0]
+					b := testCase[1]
+
+					same, _ := comparer.HaveSameBody(htmlPage(a), htmlPage(b))
+					assert.True(
+						t,
+						same,
+						"expected two documents to end up with the same body contents; '%s' and '%s'",
+						testCase[0],
+						testCase[1],
+					)
+				})
+			}
+		})
+
+		t.Run("will correctly parse content type containing a charset", func(t *testing.T) {
+			body := "<html><body><p>Hello!</p></body></html>"
+			pageA := page_fetcher.Page{
+				Body:        body,
+				ContentType: "text/html; charset=utf-8",
+			}
+			pageB := page_fetcher.Page{
+				Body:        body,
+				ContentType: "text/html; charset=utf-8",
+			}
+			same, err := comparer.HaveSameBody(pageA, pageB)
+			assert.NoError(t, err)
+			assert.True(t, same)
+		})
+	})
+
+	t.Run("when the content type is", func(t *testing.T) {
+		// the content types deliberately have a mix of
+		// charsets and no charsets to ensure we handle both cases
+		contentTypes := []string{
+			"text/css",
+			"application/javascript",
+			"application/xml; charset=utf-8",
+			"application/rss+xml",
+			"application/octet-stream",
+			"text/text; charset=utf-8",
+			"application/vnd.ms-excel",
+		}
+
+		for _, contentType := range contentTypes {
+			t.Run(contentType, func(t *testing.T) {
+				t.Run("it considers two identical strings to be the same", func(t *testing.T) {
+					pageA := page_fetcher.Page{
+						Body:        "same",
+						ContentType: contentType,
+					}
+					pageB := page_fetcher.Page{
+						Body:        "same",
+						ContentType: contentType,
+					}
+
+					same, _ := comparer.HaveSameBody(pageA, pageB)
+					assert.True(t, same)
+				})
+
+				t.Run("it considers two non-identical strings to not be the same", func(t *testing.T) {
+					pageA := page_fetcher.Page{
+						Body:        "same",
+						ContentType: contentType,
+					}
+					pageB := page_fetcher.Page{
+						Body:        "different",
+						ContentType: contentType,
+					}
+
+					same, _ := comparer.HaveSameBody(pageA, pageB)
+					assert.False(t, same)
+				})
+			})
+		}
+
+	})
+
+	t.Run("when the content types are different", func(t *testing.T) {
+		t.Run("will always return false", func(t *testing.T) {
+			same, _ := comparer.HaveSameBody(jsonPage("same"), htmlPage("same"))
+			assert.False(t, same)
+
+			same, _ = comparer.HaveSameBody(jsonPage("same"), htmlPage("different"))
 			assert.False(t, same)
 		})
 	})

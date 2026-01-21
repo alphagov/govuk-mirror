@@ -89,18 +89,21 @@ func TestFetchLivePage(t *testing.T) {
 		assert.Equal(t, "never", header)
 	})
 
-	t.Run("returns the body of the HTTP response", func(t *testing.T) {
+	t.Run("returns the body of the HTTP response and the value of the Content-Type response header", func(t *testing.T) {
 		expectedBody := "Welcome to GOV.UK. "
+		expectedHeader := "text/text"
 
 		_, fetcher, _, teardown := SetupTest(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", expectedHeader)
 			_, err := w.Write([]byte(expectedBody))
 			assert.NoError(t, err)
 		})
 		defer teardown()
 
-		body, err := fetcher.FetchLivePage("/page")
+		page, err := fetcher.FetchLivePage("/page")
 		assert.NoError(t, err)
-		assert.Equal(t, expectedBody, body)
+		assert.Equal(t, expectedBody, page.Body)
+		assert.Equal(t, expectedHeader, page.ContentType)
 	})
 
 	t.Run("returns an error if the request fails", func(t *testing.T) {
@@ -141,18 +144,21 @@ func TestFetchMirrorPage(t *testing.T) {
 		assert.Equal(t, "mirrorS3", header)
 	})
 
-	t.Run("returns the body of the HTTP response", func(t *testing.T) {
-		expectedBody := "Welcome to the mirror of GOV.UK."
+	t.Run("returns the body of the HTTP response and the value of the Content-Type response header", func(t *testing.T) {
+		expectedBody := "Welcome to GOV.UK. "
+		expectedHeader := "text/text"
 
 		_, fetcher, _, teardown := SetupTest(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", expectedHeader)
 			_, err := w.Write([]byte(expectedBody))
 			assert.NoError(t, err)
 		})
 		defer teardown()
 
-		body, err := fetcher.FetchMirrorPage("/page")
+		page, err := fetcher.FetchMirrorPage("/page")
 		assert.NoError(t, err)
-		assert.Equal(t, expectedBody, body)
+		assert.Equal(t, expectedBody, page.Body)
+		assert.Equal(t, expectedHeader, page.ContentType)
 	})
 
 	t.Run("returns an error if the request fails", func(t *testing.T) {

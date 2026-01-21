@@ -65,7 +65,7 @@ func comparePages(
 			continue
 		}
 
-		same, err := comparer.HaveSameBody(live, mirror)
+		same, err := comparer.HaveSameBody(*live, *mirror)
 		summary.NumPagesCompared++
 		if err != nil {
 			log.Error().Err(err).Msgf("error comparing live and mirror pages: %s", url)

@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"mime"
+	"mirrorer/internal/page_fetcher"
 	"slices"
 	"strings"
 
@@ -14,34 +16,49 @@ import (
 
 //counterfeiter:generate -o ./fakes/ . PageComparerInterface
 type PageComparerInterface interface {
-	HaveSameBody(pageA string, pageB string) (bool, error)
+	HaveSameBody(pageA page_fetcher.Page, pageB page_fetcher.Page) (bool, error)
 }
 
 type PageComparer struct{}
 
-// HaveSameBody takes two strings, which it assumes to be HTML, and compares the text in that page which
-// would be visible to a user. If the text is the same, the page bodies are considered to be the same.
-func (*PageComparer) HaveSameBody(pageA string, pageB string) (bool, error) {
-	if isProbablyJson(pageA) || isProbablyJson(pageB) {
-		checksumA, err := checksum(pageA)
-		if err != nil {
-			return false, err
-		}
-
-		checksumB, err := checksum(pageB)
-		if err != nil {
-			return false, err
-		}
-
-		return checksumA == checksumB, nil
-	}
-
-	docA, err := html.Parse(strings.NewReader(pageA))
+// HaveSameBody takes two page_fetcher.Page structs, and compares their Body contents based on their ContentType.
+// If ContentType is "text/html" it compares the text that would be visible to a user.
+// If ContentType is not "text/html", the Body contents are compared as strings.
+func (*PageComparer) HaveSameBody(pageA page_fetcher.Page, pageB page_fetcher.Page) (bool, error) {
+	mediaTypeA, _, err := mime.ParseMediaType(pageA.ContentType)
 	if err != nil {
 		return false, err
 	}
 
-	docB, err := html.Parse(strings.NewReader(pageB))
+	mediaTypeB, _, err := mime.ParseMediaType(pageB.ContentType)
+	if err != nil {
+		return false, err
+	}
+
+	if mediaTypeA != mediaTypeB {
+		return false, nil
+	}
+
+	switch mediaTypeA {
+	case "text/html":
+		return compareHtml(pageA, pageB)
+	default:
+		return compareStrings(pageA, pageB)
+	}
+
+}
+
+func compareStrings(pageA page_fetcher.Page, pageB page_fetcher.Page) (bool, error) {
+	return pageA.Body == pageB.Body, nil
+}
+
+func compareHtml(pageA page_fetcher.Page, pageB page_fetcher.Page) (bool, error) {
+	docA, err := html.Parse(strings.NewReader(pageA.Body))
+	if err != nil {
+		return false, err
+	}
+
+	docB, err := html.Parse(strings.NewReader(pageB.Body))
 	if err != nil {
 		return false, err
 	}
@@ -68,7 +85,7 @@ func (*PageComparer) HaveSameBody(pageA string, pageB string) (bool, error) {
 // We need this because there is lots of text in HTML that can be different
 // between two documents without affecting whether it would appear different
 // to a user. For our purposes, we only care about whether the text on the
-// page is different.
+// htmlPage is different.
 func ExtractVisibleTextFromHTML(node *html.Node) string {
 	var output strings.Builder
 	var extractText func(*html.Node)
@@ -114,8 +131,4 @@ func checksum(str string) (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(shaSum.Sum(nil)), nil
-}
-
-func isProbablyJson(str string) bool {
-	return strings.HasPrefix(str, "{") || strings.HasPrefix(str, "[")
 }

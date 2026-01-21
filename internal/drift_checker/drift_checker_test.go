@@ -5,6 +5,7 @@ import (
 	"mirrorer/internal/drift_checker"
 	notifier_fakes "mirrorer/internal/drift_checker/fakes"
 	page_comparer_fakes "mirrorer/internal/page_comparer/fakes"
+	"mirrorer/internal/page_fetcher"
 	page_fetcher_fakes "mirrorer/internal/page_fetcher/fakes"
 	"mirrorer/internal/top_urls"
 	"net/url"
@@ -16,6 +17,13 @@ import (
 func asUrl(str string) url.URL {
 	u, _ := url.Parse(str)
 	return *u
+}
+
+func htmlPage(body string) *page_fetcher.Page {
+	return &page_fetcher.Page{
+		Body:        body,
+		ContentType: "text/html",
+	}
 }
 
 func TestDriftChecker(t *testing.T) {
@@ -39,8 +47,8 @@ func TestDriftChecker(t *testing.T) {
 		fetcher := page_fetcher_fakes.FakePageFetcherInterface{}
 		comparer := page_comparer_fakes.FakePageComparerInterface{}
 
-		fetcher.FetchLivePageReturns("str", nil)
-		fetcher.FetchMirrorPageReturns("str", nil)
+		fetcher.FetchLivePageReturns(htmlPage("str"), nil)
+		fetcher.FetchMirrorPageReturns(htmlPage("str"), nil)
 		comparer.HaveSameBodyReturns(true, nil)
 
 		drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier_fakes.FakeDriftNotifierInterface{})
@@ -82,11 +90,11 @@ func TestDriftChecker(t *testing.T) {
 		fetcher := page_fetcher_fakes.FakePageFetcherInterface{}
 		comparer := page_comparer_fakes.FakePageComparerInterface{}
 
-		liveFetcherStub := func(path string) (string, error) {
-			return "LIVE-" + path, nil
+		liveFetcherStub := func(path string) (*page_fetcher.Page, error) {
+			return htmlPage("LIVE-" + path), nil
 		}
-		mirrorFetcherStub := func(path string) (string, error) {
-			return "MIRROR-" + path, nil
+		mirrorFetcherStub := func(path string) (*page_fetcher.Page, error) {
+			return htmlPage("MIRROR-" + path), nil
 		}
 
 		fetcher.FetchLivePageCalls(liveFetcherStub)
@@ -106,7 +114,7 @@ func TestDriftChecker(t *testing.T) {
 		for i := 0; i < 2; i++ {
 			a, b := comparer.HaveSameBodyArgsForCall(i)
 
-			callPairs = append(callPairs, []string{a, b})
+			callPairs = append(callPairs, []string{a.Body, b.Body})
 		}
 
 		assert.Equal(t, expected, callPairs)
@@ -132,8 +140,8 @@ func TestDriftChecker(t *testing.T) {
 		comparer := page_comparer_fakes.FakePageComparerInterface{}
 		notifier := notifier_fakes.FakeDriftNotifierInterface{}
 
-		fetcher.FetchLivePageReturns("str", nil)
-		fetcher.FetchMirrorPageReturns("str", nil)
+		fetcher.FetchLivePageReturns(htmlPage("str"), nil)
+		fetcher.FetchMirrorPageReturns(htmlPage("str"), nil)
 		comparer.HaveSameBodyReturns(true, nil)
 
 		drifts := drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier)
@@ -162,8 +170,8 @@ func TestDriftChecker(t *testing.T) {
 		comparer := page_comparer_fakes.FakePageComparerInterface{}
 		notifier := notifier_fakes.FakeDriftNotifierInterface{}
 
-		fetcher.FetchLivePageReturns("str", nil)
-		fetcher.FetchMirrorPageReturns("str", nil)
+		fetcher.FetchLivePageReturns(htmlPage("str"), nil)
+		fetcher.FetchMirrorPageReturns(htmlPage("str"), nil)
 
 		comparer.HaveSameBodyReturnsOnCall(0, false, nil)
 		comparer.HaveSameBodyReturnsOnCall(1, true, nil)
@@ -201,8 +209,8 @@ func TestDriftChecker(t *testing.T) {
 		comparer := page_comparer_fakes.FakePageComparerInterface{}
 		notifier := notifier_fakes.FakeDriftNotifierInterface{}
 
-		fetcher.FetchLivePageReturns("str", nil)
-		fetcher.FetchMirrorPageReturns("str", nil)
+		fetcher.FetchLivePageReturns(htmlPage("str"), nil)
+		fetcher.FetchMirrorPageReturns(htmlPage("str"), nil)
 
 		comparer.HaveSameBodyReturnsOnCall(0, false, nil)
 		comparer.HaveSameBodyReturnsOnCall(1, true, nil)
