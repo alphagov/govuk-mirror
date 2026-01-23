@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
+	"mirrorer/internal/drift_checker"
+	"mirrorer/internal/page_comparer"
+	"mirrorer/internal/page_fetcher"
+	"os"
 	"time"
 
 	"mirrorer/internal/config"
@@ -27,6 +30,10 @@ func main() {
 		log.Fatal().Err(err).Msg("Error parsing config")
 	}
 
+	if err := cfg.Validate(); err != nil {
+		log.Fatal().Err(err).Msg("Invalid config")
+	}
+
 	awsCfg, err := awsConfig.LoadDefaultConfig(context.Background())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load AWS config")
@@ -41,22 +48,27 @@ func main() {
 		log.Fatal().Err(err).Msg("Error generating top urls")
 	}
 
-	// This is temporary, to be removed in a future PR
-	printTopUrls(urls)
-
-	log.Fatal().Msg("Command not yet implemented")
-}
-
-// Note, this function will be removed in the follow on PR, for now it's just to help validate
-// the behaviour of the aws top urls client
-func printTopUrls(topUrls *top_urls.TopUrls) {
-	fmt.Println("Top 100 unsampled paths")
-	for _, topUrl := range topUrls.TopUnsampledUrls {
-		fmt.Printf("URL: %s Views: %d\n", &topUrl.ViewedUrl, topUrl.ViewCount)
+	fetcher, err := page_fetcher.NewPageFetcher(cfg.Site)
+	if err != nil {
+		log.Error().Err(err).Msg("error creating page fetcher")
 	}
 
-	fmt.Println("\n\n100 Sampled URLs from next 900 most popular")
-	for _, topUrl := range topUrls.RemainingSampledUrls {
-		fmt.Printf("URL: %s Views: %d\n", &topUrl.ViewedUrl, topUrl.ViewCount)
+	comparer := page_comparer.PageComparer{}
+
+	var notifier drift_checker.DriftNotifierInterface
+	if cfg.HasSlackSettings() {
+		log.Info().Msg("Using Slack credentials. Will notify about drifts on Slack")
+		notifier = drift_checker.NewSlackDriftNotifier(cfg.SlackWebhookURL())
+	} else {
+		log.Info().Msg("No Slack credentials found. Will notify about drifts on stdout")
+		notifier = drift_checker.StdOutDriftNotifier{}
+	}
+
+	driftsDetected := drift_checker.CheckPagesForDrift(urls, fetcher, &comparer, notifier)
+
+	if driftsDetected {
+		os.Exit(1)
+	} else {
+		os.Exit(0)
 	}
 }
