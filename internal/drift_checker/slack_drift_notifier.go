@@ -11,17 +11,19 @@ import (
 
 type SlackDriftNotifier struct {
 	webhookUrl url.URL
+	mirrorSite string
 }
 
-func NewSlackDriftNotifier(webhookUrl url.URL) *SlackDriftNotifier {
+func NewSlackDriftNotifier(webhookUrl url.URL, mirrorSite string) *SlackDriftNotifier {
 	return &SlackDriftNotifier{
 		webhookUrl: webhookUrl,
+		mirrorSite: mirrorSite,
 	}
 }
 
 func (s SlackDriftNotifier) Notify(summary DriftSummary) error {
 	txt := fmt.Sprintf(`
-	Drifts were detected beween the live and mirror versions of pages on GOV.UK
+	Drifts were detected beween the live and mirror versions of pages on %s
 	Pages tested: %d
 	Drifts detected: %d
 	Errors encountered: %d
@@ -29,6 +31,7 @@ func (s SlackDriftNotifier) Notify(summary DriftSummary) error {
 	Look at the logs in Logit to find out more.
 	Search "kubernetes.labels.app_kubernetes_io\/name: mirror-drift-check"
 	`,
+		s.mirrorSite,
 		summary.NumPagesCompared,
 		summary.NumDriftsDetected,
 		summary.NumErrors,
@@ -36,7 +39,8 @@ func (s SlackDriftNotifier) Notify(summary DriftSummary) error {
 
 	client := &http.Client{}
 	jsonFields := map[string]interface{}{
-		"text": txt,
+		"text":     txt,
+		"username": fmt.Sprintf("GOV.UK mirror drift detection: %s", s.mirrorSite),
 	}
 	body, err := json.Marshal(jsonFields)
 	if err != nil {
