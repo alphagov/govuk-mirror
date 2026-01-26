@@ -41,7 +41,7 @@ func TestSlackDriftNotifier_Notify(t *testing.T) {
 
 		u, err := url.Parse(srv.URL + "/webhook")
 		assert.NoError(t, err)
-		notifier := drift_checker.NewSlackDriftNotifier(*u)
+		notifier := drift_checker.NewSlackDriftNotifier(*u, "https://example.com")
 
 		err = notifier.Notify(drift_checker.DriftSummary{})
 		assert.NoError(t, err)
@@ -59,7 +59,7 @@ func TestSlackDriftNotifier_Notify(t *testing.T) {
 
 		u, err := url.Parse(srv.URL + "/webhook")
 		assert.NoError(t, err)
-		notifier := drift_checker.NewSlackDriftNotifier(*u)
+		notifier := drift_checker.NewSlackDriftNotifier(*u, "https://example.com")
 
 		err = notifier.Notify(drift_checker.DriftSummary{})
 		assert.NoError(t, err)
@@ -81,7 +81,7 @@ func TestSlackDriftNotifier_Notify(t *testing.T) {
 
 		u, err := url.Parse(srv.URL + "/webhook")
 		assert.NoError(t, err)
-		notifier := drift_checker.NewSlackDriftNotifier(*u)
+		notifier := drift_checker.NewSlackDriftNotifier(*u, "https://example.com")
 
 		err = notifier.Notify(drift_checker.DriftSummary{})
 		assert.NoError(t, err)
@@ -91,6 +91,7 @@ func TestSlackDriftNotifier_Notify(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Contains(t, result, "text")
+		assert.Contains(t, result, "username")
 	})
 
 	t.Run("returns an error if sending the request fails", func(t *testing.T) {
@@ -99,7 +100,7 @@ func TestSlackDriftNotifier_Notify(t *testing.T) {
 		u, err := url.Parse(srv.URL + "/webhook")
 		assert.NoError(t, err)
 
-		notifier := drift_checker.NewSlackDriftNotifier(*u)
+		notifier := drift_checker.NewSlackDriftNotifier(*u, "https://example.com")
 		err = notifier.Notify(drift_checker.DriftSummary{})
 		assert.Error(t, err)
 	})
@@ -112,7 +113,7 @@ func TestSlackDriftNotifier_Notify(t *testing.T) {
 		u, err := url.Parse(srv.URL + "/webhook")
 		assert.NoError(t, err)
 
-		notifier := drift_checker.NewSlackDriftNotifier(*u)
+		notifier := drift_checker.NewSlackDriftNotifier(*u, "https://example.com")
 		err = notifier.Notify(drift_checker.DriftSummary{})
 		assert.Error(t, err)
 	})

@@ -58,7 +58,7 @@ func main() {
 	var notifier drift_checker.DriftNotifierInterface
 	if cfg.HasSlackSettings() {
 		log.Info().Msg("Using Slack credentials. Will notify about drifts on Slack")
-		notifier = drift_checker.NewSlackDriftNotifier(cfg.SlackWebhookURL())
+		notifier = drift_checker.NewSlackDriftNotifier(cfg.SlackWebhookURL(), cfg.Site)
 	} else {
 		log.Info().Msg("No Slack credentials found. Will notify about drifts on stdout")
 		notifier = drift_checker.StdOutDriftNotifier{}
