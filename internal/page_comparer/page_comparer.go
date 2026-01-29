@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"golang.org/x/net/html"
 )
 
@@ -106,9 +105,6 @@ func ExtractVisibleTextFromHTML(node *html.Node) string {
 			if text != "" {
 				output.WriteString(text + "\n")
 			}
-
-		default:
-			log.Info().Any("node_type", n.Type).Msg("encountered an unexpected node type when descending the DOM tree")
 		}
 
 		// Recursively process child nodes
