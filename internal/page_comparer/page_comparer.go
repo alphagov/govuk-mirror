@@ -24,17 +24,27 @@ type PageComparer struct{}
 // If ContentType is "text/html" it compares the text that would be visible to a user.
 // If ContentType is not "text/html", the Body contents are compared as strings.
 func (*PageComparer) HaveSameBody(pageA page_fetcher.Page, pageB page_fetcher.Page) (bool, error) {
-	mediaTypeA, _, err := mime.ParseMediaType(pageA.ContentType)
-	if err != nil {
-		return false, err
+	var mediaTypeA string
+	if pageA.ContentType != "" {
+		mediaType, _, err := mime.ParseMediaType(pageA.ContentType)
+		if err != nil {
+			return false, err
+		}
+
+		mediaTypeA = mediaType
 	}
 
-	mediaTypeB, _, err := mime.ParseMediaType(pageB.ContentType)
-	if err != nil {
-		return false, err
+	var mediaTypeB string
+	if pageB.ContentType != "" {
+		mediaType, _, err := mime.ParseMediaType(pageB.ContentType)
+		if err != nil {
+			return false, err
+		}
+		mediaTypeB = mediaType
 	}
 
-	if mediaTypeA != mediaTypeB {
+	// Only do the mismatch check if both of them aren't empty
+	if (mediaTypeA != "" && mediaTypeB != "") && mediaTypeA != mediaTypeB {
 		return false, nil
 	}
 
