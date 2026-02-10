@@ -110,7 +110,7 @@ func csvRowsToUrlHitCounts(csvRows [][]string) []UrlHitCount {
 }
 
 func (topUrlsClient *AwsTopUrlsClient) startAthenaQuery(ctx context.Context) (athenaQueryExecutionId, error) {
-	yesterday := time.Now().AddDate(0, 0, -1)
+	twoDaysAgo := time.Now().AddDate(0, 0, -2)
 	athenaQuery := `
 		SELECT
 		    url, count(1) as "count"
@@ -135,9 +135,9 @@ func (topUrlsClient *AwsTopUrlsClient) startAthenaQuery(ctx context.Context) (at
 	startQueryExecutionResponse, err := topUrlsClient.athenaClient.StartQueryExecution(ctx, &athena.StartQueryExecutionInput{
 		QueryString: &athenaQuery,
 		ExecutionParameters: []string{
-			strconv.FormatInt(int64(yesterday.Day()), 10),
-			strconv.FormatInt(int64(yesterday.Month()), 10),
-			strconv.FormatInt(int64(yesterday.Year()), 10),
+			strconv.FormatInt(int64(twoDaysAgo.Day()), 10),
+			strconv.FormatInt(int64(twoDaysAgo.Month()), 10),
+			strconv.FormatInt(int64(twoDaysAgo.Year()), 10),
 		},
 		QueryExecutionContext: &athenaTypes.QueryExecutionContext{
 			Catalog:  aws.String("AwsDataCatalog"),
