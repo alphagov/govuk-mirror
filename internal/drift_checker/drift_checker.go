@@ -78,6 +78,10 @@ func comparePages(
 			summary.NumDriftsDetected++
 		}
 
-		log.Info().Bool("drift", !same).Msgf("Comparing %s (%d views)", url, page.ViewCount)
+		log.Info().
+			Bool("drift", !same).
+			Bool("live_body_empty", live.Body == "").
+			Bool("mirror_body_empty", mirror.Body == "").
+			Msgf("Comparing %s (%d views)", url, page.ViewCount)
 	}
 }
