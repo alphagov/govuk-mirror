@@ -178,6 +178,53 @@ func TestPageComparer_HaveSameBody(t *testing.T) {
 			assert.False(t, same)
 		})
 	})
+
+	t.Run("when either content type is missing", func(t *testing.T) {
+		t.Run("will compare the pages if only page a's content type is missing", func(t *testing.T) {
+			pageA := page_fetcher.Page{
+				Body:        "Body",
+				ContentType: "",
+			}
+			pageB := page_fetcher.Page{
+				Body:        "Body",
+				ContentType: "text/html; charset=utf-8",
+			}
+
+			same, err := comparer.HaveSameBody(pageA, pageB)
+			assert.NoError(t, err)
+			assert.True(t, same)
+		})
+
+		t.Run("will compare the pages if only page b's content type is missing", func(t *testing.T) {
+			pageA := page_fetcher.Page{
+				Body:        "Body",
+				ContentType: "text/html; charset=utf-8",
+			}
+			pageB := page_fetcher.Page{
+				Body:        "Body",
+				ContentType: "",
+			}
+
+			same, err := comparer.HaveSameBody(pageA, pageB)
+			assert.NoError(t, err)
+			assert.True(t, same)
+		})
+
+		t.Run("will compare them as strings", func(t *testing.T) {
+			pageA := page_fetcher.Page{
+				Body:        "<p>Body</p>",
+				ContentType: "",
+			}
+			pageB := page_fetcher.Page{
+				Body:        "<span>Body</span>",
+				ContentType: "text/html; charset=utf-8",
+			}
+
+			same, err := comparer.HaveSameBody(pageA, pageB)
+			assert.NoError(t, err)
+			assert.False(t, same)
+		})
+	})
 }
 
 func TestExtractVisibleTextFromHTML(t *testing.T) {
