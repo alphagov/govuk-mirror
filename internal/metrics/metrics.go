@@ -4,6 +4,7 @@ import (
 	"context"
 	"mirrorer/internal/config"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -25,38 +26,56 @@ type Metrics struct {
 }
 
 func NewMetrics(reg *prometheus.Registry) *Metrics {
+	hostname, hostNameSet := os.LookupEnv("HOSTNAME")
+
+	if !hostNameSet {
+		hostname = "unknown"
+	}
+
+	defaultLabels := prometheus.Labels{
+		"host": hostname,
+	}
+
 	m := &Metrics{
 		crawledPagesCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "govuk_mirror_crawled_pages_total",
-			Help: "Total number of pages successfully crawled",
+			Name:        "govuk_mirror_crawled_pages_total",
+			Help:        "Total number of pages successfully crawled",
+			ConstLabels: defaultLabels,
 		}),
 		httpErrorCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "govuk_mirror_crawler_errors_total",
-			Help: "Total number of HTTP errors encountered by the crawler",
+			Name:        "govuk_mirror_crawler_errors_total",
+			Help:        "Total number of HTTP errors encountered by the crawler",
+			ConstLabels: defaultLabels,
 		}),
 		downloadErrorCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "govuk_mirror_crawler_pages_download_errors_total",
-			Help: "Total number of download errors encountered by the crawler",
+			Name:        "govuk_mirror_crawler_pages_download_errors_total",
+			Help:        "Total number of download errors encountered by the crawler",
+			ConstLabels: defaultLabels,
 		}),
 		downloadCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "govuk_mirror_crawler_pages_downloaded_total",
-			Help: "Total number of files downloaded by the crawler",
+			Name:        "govuk_mirror_crawler_pages_downloaded_total",
+			Help:        "Total number of files downloaded by the crawler",
+			ConstLabels: defaultLabels,
 		}),
 		crawlerDuration: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "govuk_mirror_crawler_duration_minutes",
-			Help: "Duration of crawler in minutes",
+			Name:        "govuk_mirror_crawler_duration_minutes",
+			Help:        "Duration of crawler in minutes",
+			ConstLabels: defaultLabels,
 		}),
 		fileUploadCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "govuk_mirror_crawler_files_uploaded_total",
-			Help: "Total number of files the crawler has uploaded to the mirror",
+			Name:        "govuk_mirror_crawler_files_uploaded_total",
+			Help:        "Total number of files the crawler has uploaded to the mirror",
+			ConstLabels: defaultLabels,
 		}),
 		fileUploadFailuresCounter: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "govuk_mirror_crawler_file_upload_failures_total",
-			Help: "Total number of upload failures encounterd by the crawler",
+			Name:        "govuk_mirror_crawler_file_upload_failures_total",
+			Help:        "Total number of upload failures encounterd by the crawler",
+			ConstLabels: defaultLabels,
 		}),
 		mirrorLastUpdatedGauge: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "govuk_mirror_last_updated_time",
-			Help: "Last time the mirror was updated",
+			Name:        "govuk_mirror_last_updated_time",
+			Help:        "Last time the mirror was updated",
+			ConstLabels: defaultLabels,
 		}),
 	}
 
@@ -76,10 +95,19 @@ type ResponseMetrics struct {
 }
 
 func NewResponseMetrics(reg *prometheus.Registry) *ResponseMetrics {
+	hostname, hostNameSet := os.LookupEnv("HOSTNAME")
+
+	if !hostNameSet {
+		hostname = "unknown"
+	}
+
 	m := &ResponseMetrics{
 		mirrorResponseStatusCode: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "govuk_mirror_response_status_code",
 			Help: "Response status code for the MIRROR_AVAILABILITY_URL probe",
+			ConstLabels: prometheus.Labels{
+				"host": hostname,
+			},
 		}, []string{"backend"}),
 	}
 

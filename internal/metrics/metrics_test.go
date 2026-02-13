@@ -4,6 +4,7 @@ import (
 	"mirrorer/internal/config"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -90,6 +91,36 @@ func TestAllMetricsAreEmittedAndCorrectlyPrefixed(t *testing.T) {
 	for _, metric := range metricValues {
 		assert.NotNil(t, metric.Name)
 		assert.Regexp(t, "govuk_mirror_.*", *metric.Name)
+	}
+}
+
+func TestAllMetricsHaveAStaticHostLabel(t *testing.T) {
+	err := os.Setenv("HOSTNAME", "mirror-crawler-abc-123")
+	assert.NoError(t, err)
+
+	reg := prometheus.NewRegistry()
+	m := NewMetrics(reg)
+
+	// govuk_mirror_last_updated_time has to be manually registered
+	reg.MustRegister(m.MirrorLastUpdatedGauge())
+	responseMetrics := NewResponseMetrics(reg)
+
+	// GaugeVecs need a label for the metric to be emitted
+	responseMetrics.mirrorResponseStatusCode.With(prometheus.Labels{"backend": "backend"}).Set(float64(200))
+
+	metrics, err := reg.Gather()
+	assert.NoError(t, err)
+	for _, metric := range metrics {
+		for _, value := range metric.Metric {
+			labelFound := false
+			for _, label := range value.Label {
+				if *label.Name == "host" && *label.Value == "mirror-crawler-abc-123" {
+					labelFound = true
+					break
+				}
+			}
+			assert.True(t, labelFound, "host label not found on metric %s", *metric.Name)
+		}
 	}
 }
 
