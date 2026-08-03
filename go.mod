@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.105.2
 	github.com/caarlos0/env/v9 v9.0.0
 	github.com/gocolly/colly/v2 v2.3.0
-	github.com/prometheus/client_golang v1.24.0
+	github.com/prometheus/client_golang v1.24.1
 	github.com/rs/zerolog v1.35.1
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/net v0.57.0
@@ -53,7 +53,7 @@ require (
 	github.com/nlnwa/whatwg-url v0.6.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.70.0 // indirect
+	github.com/prometheus/common v0.70.1 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
