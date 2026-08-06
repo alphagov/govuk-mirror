@@ -69,18 +69,25 @@ func GenerateFilePath(u *url.URL, contentType string) (string, error) {
 	if contentType != "" {
 		// Find the extension(s) based on the content type
 		extensions, err = mime.ExtensionsByType(contentType)
+
+		// Remove legacy .shtml extension for text/html content type
+		if slices.Contains(extensions, ".shtml") {
+			idx := slices.Index(extensions, ".shtml")
+			extensions = slices.Delete(extensions, idx, idx+1)
+		}
+
 		if err != nil {
 			return "", err
 		}
 	}
 
-	existingExtenion := filepath.Ext(lastSegment)
+	existingExtension := filepath.Ext(lastSegment)
 
-	if len(extensions) == 0 && existingExtenion == "" {
+	if len(extensions) == 0 && existingExtension == "" {
 		return "", fmt.Errorf("error determining content type")
 	}
 
-	if len(extensions) > 0 && !slices.Contains(extensions, existingExtenion) {
+	if len(extensions) > 0 && !slices.Contains(extensions, existingExtension) {
 		segmentsSlice[len(segmentsSlice)-1] += extensions[len(extensions)-1]
 	}
 

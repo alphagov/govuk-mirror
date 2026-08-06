@@ -1,5 +1,5 @@
 ARG go_registry=""
-ARG go_version=1.25.4
+ARG go_version=1.26.4
 ARG go_tag_suffix=-alpine
 
 
