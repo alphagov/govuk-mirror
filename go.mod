@@ -1,6 +1,6 @@
 module mirrorer
 
-go 1.25.4
+go 1.26.4
 
 require (
 	github.com/antchfx/xmlquery v1.5.1
