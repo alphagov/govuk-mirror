@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/antchfx/xmlquery v1.5.1
-	github.com/aws/aws-sdk-go-v2 v1.43.6
+	github.com/aws/aws-sdk-go-v2 v1.43.7
 	github.com/aws/aws-sdk-go-v2/config v1.32.37
 	github.com/aws/aws-sdk-go-v2/service/athena v1.60.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.107.2
