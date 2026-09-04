@@ -252,14 +252,14 @@ func responseHandler(ctx context.Context, m *metrics.Metrics, uploader upload.Up
 			path, err := file.GenerateFilePath(r.Request.URL, contentType)
 			if err != nil {
 				log.Error().Err(err).Msg(fmt.Sprintf("Error generating file path for %s", r.Request.URL.String()))
-			}
-
-			err = uploader.UploadFile(ctx, path, path, contentType)
-			if err != nil {
-				log.Error().Err(err).Msg(fmt.Sprintf("Error uploading %s", path))
-				metrics.FileUploadFailed(m)
 			} else {
-				metrics.FileUploaded(m)
+				err = uploader.UploadFile(ctx, path, path, contentType)
+				if err != nil {
+					log.Error().Err(err).Msg(fmt.Sprintf("Error uploading %s", path))
+					metrics.FileUploadFailed(m)
+				} else {
+					metrics.FileUploaded(m)
+				}
 			}
 		}
 	}
