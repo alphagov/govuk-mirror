@@ -7,8 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mirrorer/internal/aws_client_interfaces"
 	"os"
+
+	"mirrorer/internal/aws_client_interfaces"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -46,7 +47,6 @@ func (u S3Uploader) UploadFile(ctx context.Context, filePath string, destination
 		Bucket: aws.String(u.bucketName),
 		Key:    aws.String(destinationKey),
 	})
-
 	if err != nil {
 		var notFoundErr *types.NotFound
 		if !errors.As(err, &notFoundErr) {
@@ -58,20 +58,14 @@ func (u S3Uploader) UploadFile(ctx context.Context, filePath string, destination
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %w", filePath, err)
 	}
-	defer (func() {
+	defer func() {
 		err := file.Close()
 		if err != nil {
 			log.Error().Err(err).Str("file", filePath).Msg("failed to close file")
 		}
-	})()
+	}()
 
-	// the object wasn't present in the remote
-	// or the sizes were different
-	if s3ObjectMeta == nil || *s3ObjectMeta.ContentLength != fileInfo.Size() || (s3ObjectMeta.ContentType != nil && *s3ObjectMeta.ContentType != contentType) {
-		if s3ObjectMeta != nil && s3ObjectMeta.ContentType != nil && *s3ObjectMeta.ContentType != contentType {
-			log.Info().Msgf("File %s has a different content type on S3 than live, uploading", filePath)
-		}
-
+	if needToUpload(filePath, s3ObjectMeta, fileInfo, contentType) {
 		hasher := sha1.New()
 
 		if _, err := io.Copy(hasher, file); err != nil {
@@ -92,11 +86,33 @@ func (u S3Uploader) UploadFile(ctx context.Context, filePath string, destination
 			ChecksumSHA1:      aws.String(checksum),
 			ContentType:       aws.String(contentType),
 		})
-
 		if err != nil {
 			return fmt.Errorf("failed to write object: %w", err)
 		}
 	}
 
 	return nil
+}
+
+func needToUpload(filePath string, s3ObjectMeta *s3.HeadObjectOutput, fileInfo os.FileInfo, contentType string) bool {
+	if s3ObjectMeta == nil {
+		log.Info().Msgf("%s returned no S3 metadata: uploading", filePath)
+		return true
+	} else if *s3ObjectMeta.ContentLength != fileInfo.Size() {
+		log.Info().Msgf("%s S3 size (%d) != live size (%d): uploading",
+			filePath,
+			*s3ObjectMeta.ContentLength,
+			fileInfo.Size())
+		return true
+	} else if s3ObjectMeta.ContentType != nil && *s3ObjectMeta.ContentType != contentType {
+		log.Info().Msgf("%s S3 contentType (%s) != live contentType (%s): uploading",
+			filePath,
+			*s3ObjectMeta.ContentType,
+			contentType)
+		return true
+	} else {
+		log.Info().Msgf("%s is the same as in S3", filePath)
+	}
+
+	return false
 }
