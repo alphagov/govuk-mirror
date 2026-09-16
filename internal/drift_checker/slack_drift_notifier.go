@@ -22,7 +22,8 @@ func NewSlackDriftNotifier(webhookUrl url.URL, mirrorSite string) *SlackDriftNot
 }
 
 func (s SlackDriftNotifier) Notify(summary DriftSummary) error {
-	txt := fmt.Sprintf(`
+	txt := fmt.Sprintf(
+		`
 	Drifts were detected beween the live and mirror versions of pages on %s
 	Pages tested: %d
 	Drifts detected: %d
@@ -52,9 +53,9 @@ func (s SlackDriftNotifier) Notify(summary DriftSummary) error {
 		return err
 	}
 
-	defer (func() {
+	defer func() {
 		_ = resp.Body.Close()
-	})()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("unexpected status code: " + resp.Status)

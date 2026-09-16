@@ -13,6 +13,7 @@ type MirrorComparisonConfig struct {
 	CompareTopUnsampledCount     int    `env:"COMPARE_TOP_UNSAMPLED_COUNT" envDefault:"100"`
 	CompareRemainingSampledCount int    `env:"COMPARE_REMAINING_SAMPLED_COUNT" envDefault:"100"`
 	SlackWebhook                 string `env:"SLACK_WEBHOOK" envDefault:""`
+	PermissibleDrifts            int    `env:"PERMISSIBLE_DRIFTS" envDefault:"200"`
 }
 
 func NewMirrorComparisonConfig() (*MirrorComparisonConfig, error) {
@@ -51,7 +52,7 @@ func (mcc *MirrorComparisonConfig) HasSlackSettings() bool {
 	if strings.TrimSpace(mcc.SlackWebhook) == "" {
 		return false
 	}
-	
+
 	_, err := url.Parse(mcc.SlackWebhook)
 	return err == nil
 }
