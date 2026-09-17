@@ -2,6 +2,7 @@ package drift_checker
 
 import (
 	"fmt"
+
 	"mirrorer/internal/page_comparer"
 	"mirrorer/internal/page_fetcher"
 	"mirrorer/internal/top_urls"
@@ -19,6 +20,7 @@ func CheckPagesForDrift(
 	fetcher page_fetcher.PageFetcherInterface,
 	comparer page_comparer.PageComparerInterface,
 	notifier DriftNotifierInterface,
+	permissibleDrifts int,
 ) bool {
 	summary := DriftSummary{}
 
@@ -28,7 +30,7 @@ func CheckPagesForDrift(
 	log.Info().Msgf("Comparing remaining %d sampled paths", len(urls.RemainingSampledUrls))
 	comparePages(urls.RemainingSampledUrls, fetcher, comparer, &summary)
 
-	if summary.NumDriftsDetected > 0 {
+	if summary.NumDriftsDetected > permissibleDrifts {
 		err := notifier.Notify(summary)
 		if err != nil {
 			log.Error().Err(err).Msgf("failed to send drift summary notification")

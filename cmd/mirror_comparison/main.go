@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"math/rand"
+	"os"
+	"time"
+
 	"mirrorer/internal/drift_checker"
 	"mirrorer/internal/page_comparer"
 	"mirrorer/internal/page_fetcher"
-	"os"
-	"time"
 
 	"mirrorer/internal/config"
 	"mirrorer/internal/logger"
@@ -64,7 +65,7 @@ func main() {
 		notifier = drift_checker.StdOutDriftNotifier{}
 	}
 
-	driftsDetected := drift_checker.CheckPagesForDrift(urls, fetcher, &comparer, notifier)
+	driftsDetected := drift_checker.CheckPagesForDrift(urls, fetcher, &comparer, notifier, cfg.PermissibleDrifts)
 
 	if driftsDetected {
 		os.Exit(1)

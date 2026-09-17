@@ -2,14 +2,15 @@ package drift_checker_test
 
 import (
 	"errors"
+	"net/url"
+	"testing"
+
 	"mirrorer/internal/drift_checker"
 	notifier_fakes "mirrorer/internal/drift_checker/fakes"
 	page_comparer_fakes "mirrorer/internal/page_comparer/fakes"
 	"mirrorer/internal/page_fetcher"
 	page_fetcher_fakes "mirrorer/internal/page_fetcher/fakes"
 	"mirrorer/internal/top_urls"
-	"net/url"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,7 +28,6 @@ func htmlPage(body string) *page_fetcher.Page {
 }
 
 func TestDriftChecker(t *testing.T) {
-
 	t.Run("fetches the live and mirror versions of each page", func(t *testing.T) {
 		urls := &top_urls.TopUrls{
 			TopUnsampledUrls: []top_urls.UrlHitCount{
@@ -51,7 +51,7 @@ func TestDriftChecker(t *testing.T) {
 		fetcher.FetchMirrorPageReturns(htmlPage("str"), nil)
 		comparer.HaveSameBodyReturns(true, nil)
 
-		drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier_fakes.FakeDriftNotifierInterface{})
+		drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier_fakes.FakeDriftNotifierInterface{}, 0)
 
 		assert.Equal(t, 2, fetcher.FetchLivePageCallCount())
 		assert.Equal(t, 2, fetcher.FetchMirrorPageCallCount())
@@ -101,7 +101,7 @@ func TestDriftChecker(t *testing.T) {
 		fetcher.FetchMirrorPageCalls(mirrorFetcherStub)
 		comparer.HaveSameBodyReturns(true, nil)
 
-		drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier_fakes.FakeDriftNotifierInterface{})
+		drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier_fakes.FakeDriftNotifierInterface{}, 0)
 
 		assert.Equal(t, 2, comparer.HaveSameBodyCallCount())
 
@@ -144,13 +144,44 @@ func TestDriftChecker(t *testing.T) {
 		fetcher.FetchMirrorPageReturns(htmlPage("str"), nil)
 		comparer.HaveSameBodyReturns(true, nil)
 
-		drifts := drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier)
+		drifts := drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier, 0)
 
 		assert.False(t, drifts)
 		assert.Equal(t, 0, notifier.NotifyCallCount())
 	})
 
-	t.Run("if there are any drifts, it sends an alert with a summary of the findings, and returns true to indicate >0 drifts were found", func(t *testing.T) {
+	t.Run("if there is an acceptable number of drifts, it does not send an alert, and returns false", func(t *testing.T) {
+		urls := &top_urls.TopUrls{
+			TopUnsampledUrls: []top_urls.UrlHitCount{
+				{
+					ViewedUrl: asUrl("/page-1"),
+					ViewCount: 100,
+				},
+			},
+			RemainingSampledUrls: []top_urls.UrlHitCount{
+				{
+					ViewedUrl: asUrl("/page-2"),
+					ViewCount: 10,
+				},
+			},
+		}
+
+		fetcher := page_fetcher_fakes.FakePageFetcherInterface{}
+		comparer := page_comparer_fakes.FakePageComparerInterface{}
+		notifier := notifier_fakes.FakeDriftNotifierInterface{}
+
+		fetcher.FetchLivePageReturns(htmlPage("str"), nil)
+		fetcher.FetchMirrorPageReturns(htmlPage("str"), nil)
+		comparer.HaveSameBodyReturnsOnCall(0, false, nil)
+		comparer.HaveSameBodyReturnsOnCall(1, true, nil)
+
+		drifts := drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier, 10)
+
+		assert.False(t, drifts)
+		assert.Equal(t, 0, notifier.NotifyCallCount())
+	})
+
+	t.Run("if there is an unacceptable number of drifts, it sends an alert with a summary of the findings, and returns true to indicate drifts were found", func(t *testing.T) {
 		urls := &top_urls.TopUrls{
 			TopUnsampledUrls: []top_urls.UrlHitCount{
 				{
@@ -176,7 +207,7 @@ func TestDriftChecker(t *testing.T) {
 		comparer.HaveSameBodyReturnsOnCall(0, false, nil)
 		comparer.HaveSameBodyReturnsOnCall(1, true, nil)
 
-		drifts := drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier)
+		drifts := drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier, 0)
 
 		assert.True(t, drifts)
 		assert.Equal(t, 1, notifier.NotifyCallCount())
@@ -216,7 +247,7 @@ func TestDriftChecker(t *testing.T) {
 		comparer.HaveSameBodyReturnsOnCall(1, true, nil)
 		comparer.HaveSameBodyReturnsOnCall(2, false, errors.New("failed to compare"))
 
-		_ = drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier)
+		_ = drift_checker.CheckPagesForDrift(urls, &fetcher, &comparer, &notifier, 0)
 
 		assert.Equal(t, 1, notifier.NotifyCallCount())
 		summary := notifier.NotifyArgsForCall(0)
