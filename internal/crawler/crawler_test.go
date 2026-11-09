@@ -14,7 +14,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/gocolly/colly/v2"
@@ -23,7 +24,73 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var sites_visited = []string{}
+// The fixture includes generatedSitemaps extra sitemaps, each listing
+// generatedPagesPerSitemap pages. With ASYNC on, as in production, these are
+// fetched and parsed in parallel, so the crawl exercises the concurrent
+// handling of sitemap entries.
+const (
+	generatedSitemaps        = 20
+	generatedPagesPerSitemap = 50
+)
+
+func generatedSitemapPath(i int) string {
+	return fmt.Sprintf("/generated_sitemap_%d.xml", i)
+}
+
+func generatedPagePath(sitemap, page int) string {
+	return fmt.Sprintf("/generated/%d/%d", sitemap, page)
+}
+
+// sitemapIndexBody lists the hand-written sitemaps followed by the generated ones.
+func sitemapIndexBody() []byte {
+	var b strings.Builder
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	<sitemap>
+		<loc>/sitemap_1.xml</loc>
+		<lastmod>2023-10-10T02:50:02+00:00</lastmod>
+	</sitemap>
+	<sitemap>
+		<loc>/sitemap_2.xml</loc>
+		<lastmod>2025-11-06T00:00:00+00:00</lastmod>
+	</sitemap>
+`)
+	for i := range generatedSitemaps {
+		fmt.Fprintf(&b, "\t<sitemap><loc>%s</loc></sitemap>\n", generatedSitemapPath(i))
+	}
+	b.WriteString(`</sitemapindex>`)
+	return []byte(b.String())
+}
+
+func generatedSitemapBody(i int) []byte {
+	var b strings.Builder
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+`)
+	for j := range generatedPagesPerSitemap {
+		fmt.Fprintf(&b, "\t<url><loc>%s</loc><lastmod>2024-01-%02dT00:00:00+00:00</lastmod></url>\n",
+			generatedPagePath(i, j), j%28+1)
+	}
+	b.WriteString(`</urlset>`)
+	return []byte(b.String())
+}
+
+func init() {
+	for i := range generatedSitemaps {
+		routes[generatedSitemapPath(i)] = route{
+			status:      http.StatusOK,
+			contentType: "application/xml",
+			body:        generatedSitemapBody(i),
+		}
+		for j := range generatedPagesPerSitemap {
+			routes[generatedPagePath(i, j)] = route{
+				status:      http.StatusOK,
+				contentType: "text/html",
+				body:        []byte(`<!DOCTYPE html><html><head><title>Generated</title></head></html>`),
+			}
+		}
+	}
+}
 
 func listFiles(root string) ([]string, error) {
 	var files []string
@@ -39,12 +106,14 @@ func listFiles(root string) ([]string, error) {
 	return files, err
 }
 
-var routes = map[string]struct {
+type route struct {
 	body             []byte
 	status           int
 	contentType      string
 	redirectLocation string
-}{
+}
+
+var routes = map[string]route{
 	"/": {
 		status:      http.StatusOK,
 		contentType: "text/html",
@@ -71,17 +140,7 @@ var routes = map[string]struct {
 	"/sitemap.xml": {
 		status:      http.StatusOK,
 		contentType: "application/xml",
-		body: []byte(`<?xml version="1.0" encoding="UTF-8"?>
-					  <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-						<sitemap>
-						  <loc>/sitemap_1.xml</loc>
-						  <lastmod>2023-10-10T02:50:02+00:00</lastmod>
-						</sitemap>
-						<sitemap>
-						  <loc>/sitemap_2.xml</loc>
-						  <lastmod>2025-11-06T00:00:00+00:00</lastmod>
-						</sitemap>
-					  </sitemapindex>`),
+		body:        sitemapIndexBody(),
 	},
 	"/sitemap_1.xml": {
 		status:      http.StatusOK,
@@ -213,7 +272,28 @@ func isRedirect(status int) bool {
 	return status >= 300 && status < 400
 }
 
-func newTestServer(t *testing.T) *httptest.Server {
+// testServer serves routes and records which paths were requested. Requests
+// arrive on concurrent goroutines, so the record is guarded by a mutex.
+type testServer struct {
+	*httptest.Server
+	mu      sync.Mutex
+	visited map[string]bool
+}
+
+func (s *testServer) recordVisit(path string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.visited[path] = true
+}
+
+func (s *testServer) wasVisited(path string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.visited[path]
+}
+
+func newTestServer(t *testing.T) *testServer {
+	s := &testServer{visited: map[string]bool{}}
 	mux := http.NewServeMux()
 
 	for path, response := range routes {
@@ -230,14 +310,13 @@ func newTestServer(t *testing.T) *httptest.Server {
 				if err != nil {
 					t.Error("Test server unable to write response")
 				}
-				sites_visited = append(sites_visited, r.URL.Path)
+				s.recordVisit(r.URL.Path)
 			})
 		}
 	}
 
-	srv := httptest.NewUnstartedServer(mux)
-	srv.Start()
-	return srv
+	s.Server = httptest.NewServer(mux)
+	return s
 }
 
 func TestNewCrawler(t *testing.T) {
@@ -369,6 +448,17 @@ func TestRun(t *testing.T) {
 	serverUrl, _ := url.Parse(ts.URL)
 	hostname := serverUrl.Hostname()
 
+	// Every generated sitemap and page should be saved and uploaded, on top of
+	// the hand-written files in tests.
+	var generatedFiles []string
+	for i := range generatedSitemaps {
+		generatedFiles = append(generatedFiles, hostname+generatedSitemapPath(i))
+		for j := range generatedPagesPerSitemap {
+			generatedFiles = append(generatedFiles, hostname+generatedPagePath(i, j)+".html")
+		}
+	}
+	expectedFiles := len(tests) + len(generatedFiles)
+
 	// Make mime types across consistent different systems
 	err := mime.LoadAdditionalMimeTypes()
 	if err != nil {
@@ -378,6 +468,8 @@ func TestRun(t *testing.T) {
 	// Create a new crawler instance
 	cfg := &config.Config{
 		Site:           ts.URL + "/sitemap.xml",
+		Async:          true,
+		Concurrency:    10,
 		AllowedDomains: []string{hostname},
 		URLFilters: []*regexp.Regexp{
 			regexp.MustCompile(".*"),
@@ -427,7 +519,7 @@ func TestRun(t *testing.T) {
 		files in the test array
 	*/
 	t.Run("correct downloadCounter metric", func(t *testing.T) {
-		assert.Equal(t, float64(len(tests)), testutil.ToFloat64(m.DownloadCounter()))
+		assert.Equal(t, float64(expectedFiles), testutil.ToFloat64(m.DownloadCounter()))
 	})
 
 	/*
@@ -435,7 +527,7 @@ func TestRun(t *testing.T) {
 		files in the test array
 	*/
 	t.Run("correct crawledPagesCounter metric", func(t *testing.T) {
-		assert.Equal(t, float64(len(tests)), testutil.ToFloat64(m.CrawledPagesCounter()))
+		assert.Equal(t, float64(expectedFiles), testutil.ToFloat64(m.CrawledPagesCounter()))
 	})
 
 	// Assert that the expected content matches the actual content saved
@@ -453,30 +545,35 @@ func TestRun(t *testing.T) {
 		for _, test := range tests {
 			test_paths = append(test_paths, hostname+test.filePath)
 		}
+		test_paths = append(test_paths, generatedFiles...)
 
 		files, err := listFiles(hostname)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, files, test_paths)
 	})
 
-	t.Run("most recent site visited first according to lastmod", func(t *testing.T) {
-		// site - lastmod
-		// /2 	- 2025-11-07T11
-		// /	- 2025-11-06T11
-		// /1	- 2025-11-05T11
-		// /3	- no lastmod, default to 2000-01-01T00
-
-		assert.Less(t, slices.Index(sites_visited, "/2"), slices.Index(sites_visited, "/"))
-		assert.Less(t, slices.Index(sites_visited, "/"), slices.Index(sites_visited, "/1"))
-		assert.Less(t, slices.Index(sites_visited, "/1"), slices.Index(sites_visited, "/500"))
-		assert.Less(t, slices.Index(sites_visited, "/500"), slices.Index(sites_visited, "/3"))
+	t.Run("every page listed in the sitemaps is crawled", func(t *testing.T) {
+		var missing []string
+		for i := range generatedSitemaps {
+			for j := range generatedPagesPerSitemap {
+				if p := generatedPagePath(i, j); !ts.wasVisited(p) {
+					missing = append(missing, p)
+				}
+			}
+		}
+		for _, p := range []string{"/", "/1", "/2", "/3", "/500"} {
+			if !ts.wasVisited(p) {
+				missing = append(missing, p)
+			}
+		}
+		assert.Empty(t, missing, "%d sitemap pages were never requested", len(missing))
 	})
 
 	t.Run("each file has been uploaded", func(t *testing.T) {
 		files, err := listFiles(hostname)
 		assert.NoError(t, err)
 
-		assert.Equal(t, len(tests), uploader.UploadFileCallCount())
+		assert.Equal(t, expectedFiles, uploader.UploadFileCallCount())
 
 		var uploadedPaths []string
 		for i := 0; i < uploader.UploadFileCallCount(); i++ {
@@ -490,10 +587,28 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("correct file uploaded counter metric", func(t *testing.T) {
-		assert.Equal(t, float64(len(tests)-1), testutil.ToFloat64(m.FileUploadCounter()))
+		assert.Equal(t, float64(expectedFiles-1), testutil.ToFloat64(m.FileUploadCounter()))
 	})
 
 	t.Run("correct file upload failures counter metric", func(t *testing.T) {
 		assert.Equal(t, float64(1), testutil.ToFloat64(m.FileUploadFailuresCounter()))
 	})
+}
+
+func TestSortNewestFirst(t *testing.T) {
+	entries := []entry{
+		{key: "/1", val: "2025-11-05T11:00:00+00:00"},
+		{key: "/3", val: defaultLastmod},
+		{key: "/2", val: "2025-11-07T11:00:00+00:00"},
+		{key: "/500", val: "2025-01-07T11:00:00+00:00"},
+		{key: "/", val: "2025-11-06T11:00:00+00:00"},
+	}
+
+	sortNewestFirst(entries)
+
+	var keys []string
+	for _, e := range entries {
+		keys = append(keys, e.key)
+	}
+	assert.Equal(t, []string{"/2", "/", "/1", "/500", "/3"}, keys)
 }

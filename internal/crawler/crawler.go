@@ -23,6 +23,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// defaultLastmod is used for sitemap entries with no <lastmod>, so they're
+// crawled after everything that has one.
+const defaultLastmod = "2000-01-01T00:00:00Z"
+
 type entry struct {
 	val string
 	key string
@@ -185,7 +189,7 @@ func urlsetXmlHandler(crawlState *CrawlState) func(e *colly.XMLElement) {
 			var lastmod string
 			if child.SelectElement("lastmod") == nil {
 				log.Info().Str("loc", child.SelectElement("loc").InnerText()).Msg("No lastmod element")
-				lastmod = "2000-01-01T00:00:00Z"
+				lastmod = defaultLastmod
 			} else {
 				lastmod = child.SelectElement("lastmod").InnerText()
 			}
@@ -212,14 +216,19 @@ func scrapeHandler(crawlState *CrawlState) func(*colly.Response) {
 		entries := slices.Clone(crawlState.entries)
 		crawlState.mu.Unlock()
 
-		slices.SortFunc(entries, func(a, b entry) int {
-			return strings.Compare(a.val, b.val)
-		})
-		slices.Reverse(entries)
+		sortNewestFirst(entries)
 		for _, ei := range entries {
 			_ = r.Request.Visit(ei.key)
 		}
 	}
+}
+
+// sortNewestFirst sorts sitemap entries by lastmod, most recent first, so
+// recently changed pages are queued for crawling before older ones.
+func sortNewestFirst(entries []entry) {
+	slices.SortFunc(entries, func(a, b entry) int {
+		return strings.Compare(b.val, a.val)
+	})
 }
 
 func responseHandler(ctx context.Context, m *metrics.Metrics, uploader upload.Uploader) func(*colly.Response) {
