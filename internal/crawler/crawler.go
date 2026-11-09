@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/antchfx/xmlquery"
@@ -28,6 +29,7 @@ type entry struct {
 }
 
 type CrawlState struct {
+	mu              sync.Mutex
 	entries         []entry
 	numSitemaps     int
 	counterSitemaps int
@@ -166,7 +168,9 @@ func htmlHandler() func(e *colly.HTMLElement) {
 func sitemapXmlHandler(crawlState *CrawlState) func(e *colly.XMLElement) {
 	return func(e *colly.XMLElement) {
 		nodes, _ := xmlquery.QueryAll(e.DOM.(*xmlquery.Node), "//sitemap")
+		crawlState.mu.Lock()
 		crawlState.numSitemaps = len(nodes)
+		crawlState.mu.Unlock()
 
 		xmlquery.FindEach(e.DOM.(*xmlquery.Node), "//sitemap", func(i int, child *xmlquery.Node) {
 			_ = e.Request.Visit(child.SelectElement("loc").InnerText())
@@ -176,6 +180,7 @@ func sitemapXmlHandler(crawlState *CrawlState) func(e *colly.XMLElement) {
 
 func urlsetXmlHandler(crawlState *CrawlState) func(e *colly.XMLElement) {
 	return func(e *colly.XMLElement) {
+		var entries []entry
 		xmlquery.FindEach(e.DOM.(*xmlquery.Node), "//url", func(i int, child *xmlquery.Node) {
 			var lastmod string
 			if child.SelectElement("lastmod") == nil {
@@ -184,26 +189,34 @@ func urlsetXmlHandler(crawlState *CrawlState) func(e *colly.XMLElement) {
 			} else {
 				lastmod = child.SelectElement("lastmod").InnerText()
 			}
-			crawlState.entries = append(crawlState.entries, entry{
+			entries = append(entries, entry{
 				val: lastmod,
 				key: child.SelectElement("loc").InnerText()})
 		})
+
+		crawlState.mu.Lock()
+		crawlState.entries = append(crawlState.entries, entries...)
 		crawlState.counterSitemaps += 1
+		crawlState.mu.Unlock()
 	}
 }
 
 func scrapeHandler(crawlState *CrawlState) func(*colly.Response) {
 	return func(r *colly.Response) {
+		crawlState.mu.Lock()
 		if crawlState.isScraping || r.Request.URL.String() == "/sitemap.xml" || crawlState.counterSitemaps < crawlState.numSitemaps {
+			crawlState.mu.Unlock()
 			return
 		}
 		crawlState.isScraping = true
+		entries := slices.Clone(crawlState.entries)
+		crawlState.mu.Unlock()
 
-		slices.SortFunc(crawlState.entries, func(a, b entry) int {
+		slices.SortFunc(entries, func(a, b entry) int {
 			return strings.Compare(a.val, b.val)
 		})
-		slices.Reverse(crawlState.entries)
-		for _, ei := range crawlState.entries {
+		slices.Reverse(entries)
+		for _, ei := range entries {
 			_ = r.Request.Visit(ei.key)
 		}
 	}
