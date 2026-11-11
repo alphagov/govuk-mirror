@@ -17,7 +17,7 @@ lint:
 	golangci-lint run
 
 unit_tests:
-	go test -v ./...
+	go test -race -v ./...
 
 test-local:
 	@echo "Running local GOV.UK mirror test..."
