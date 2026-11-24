@@ -6,7 +6,7 @@ require (
 	github.com/antchfx/xmlquery v1.5.2
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.18
-	github.com/aws/aws-sdk-go-v2/service/athena v1.67.0
+	github.com/aws/aws-sdk-go-v2/service/athena v1.67.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.10
 	github.com/caarlos0/env/v9 v9.0.0
 	github.com/gocolly/colly/v2 v2.3.0
